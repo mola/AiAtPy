@@ -16,7 +16,11 @@ from aiatconfig import AiAtConfig
 AiAtConfig.set_conf_dir(CONF_DIR)
 AiAtConfig.set_conf_dbdir(DB_DIR)
 
+# Force initialization of settings
+AiAtConfig.initialize_config()
+
 # NOW it's safe to import other modules that might depend on AiAtConfig
+from database.session import init_db
 from app_manager import AppManager
 
 def initialize_settings():
@@ -58,9 +62,10 @@ if __name__ == "__main__":
     initialize_settings()
     settings = QSettings(os.path.join(CONF_DIR, "settings.ini"), QSettings.IniFormat)
 
+    init_db()
+    
     qt_app = QCoreApplication([])
     app_manager = AppManager(settings)
     app_manager.initialize()
-
 
     run()
