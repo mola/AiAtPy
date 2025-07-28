@@ -1,0 +1,9 @@
+{
+    "files": [
+        "main.py",
+        "app_manager.py",
+        "aiatconfig.py",
+        "flask_app.py",
+        "bridge.py"
+    ]
+}
