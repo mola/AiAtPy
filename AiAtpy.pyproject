@@ -4,6 +4,8 @@
         "app_manager.py",
         "aiatconfig.py",
         "flask_app.py",
-        "bridge.py"
+        "bridge.py",
+        "llm_connectors/base_connector.py",
+        "llm_connectors/deepseek_connector.py"
     ]
 }
