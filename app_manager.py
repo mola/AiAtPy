@@ -1,5 +1,5 @@
 import threading
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Slot, QTimer
 from flask_app import create_flask_app, start_flask
 from bridge import Bridge
 from database.session import SessionLocal
@@ -15,11 +15,19 @@ class AppManager(QObject):
         self.flask_app = None
         self.paradox_detector = ParadoxDetector(self)
         self.bridge.new_analysis_task.connect(self.handle_new_task)
+        self.dummy_timer = None
 
     def initialize(self):
+        self.setup_dummy_timer()
         self.setup_flask()
         # Initialize other components
         self.paradox_detector.initialize()
+
+    def setup_dummy_timer(self):
+        self.dummy_timer = QTimer()
+        self.dummy_timer.start(1000)  # fire every 1000ms
+        self.dummy_timer.timeout.connect(lambda: None)
+
 
     def setup_flask(self):
         self.flask_app = create_flask_app(self.settings)
