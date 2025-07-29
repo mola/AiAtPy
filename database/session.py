@@ -23,7 +23,7 @@ def init_db():
         if admin_user is None:
             # Create admin user
             from .crud import create_user
-            hashed_password = generate_password_hash("admin_password")  # Change to strong password
+            hashed_password = generate_password_hash("admin")  # Change to strong password
             create_user(
                 db, 
                 username=admin_username,
