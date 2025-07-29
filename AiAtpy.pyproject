@@ -6,6 +6,16 @@
         "flask_app.py",
         "bridge.py",
         "llm_connectors/base_connector.py",
-        "llm_connectors/deepseek_connector.py"
+        "llm_connectors/deepseek_connector.py",
+        "database/__init__.py",
+        "database/crud.py",
+        "database/models.py",
+        "database/session.py",
+        "flask_server/__init__.py",
+        "flask_server/auth.py",
+        "flask_server/routes.py",
+        "pipeline/__init__.py",
+        "pipeline/comparison_task.py",
+        "pipeline/paradox_detector.py"
     ]
 }
