@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON
 from database.session import Base
 
 class Law(Base):
@@ -8,7 +8,7 @@ class Law(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     text = Column(Text, nullable=False)
-    category = Column(String(100), nullable=False)
+    category = Column(JSON)
     enactment_date = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
