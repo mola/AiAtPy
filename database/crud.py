@@ -15,18 +15,23 @@ def create_law(db: Session, title: str, text: str, category: str, enactment_date
     return db_law
 
 def get_laws_by_category_and_date(db: Session, category: str, start_date: int = None, end_date: int = None):
-    query = db.query(Law).filter(Law.category == category)
-    
-    if start_date:
-        # Convert Unix timestamp to datetime for comparison
-        start_dt = datetime.utcfromtimestamp(start_date)
-        query = query.filter(Law.enactment_date >= start_dt)
-    
-    if end_date:
-        # Convert Unix timestamp to datetime for comparison
-        end_dt = datetime.utcfromtimestamp(end_date)
-        query = query.filter(Law.enactment_date <= end_dt)
-    
+    query = db.query(Law)  # Start with the basic query for all laws
+
+
+    # # Check if the category is provided and not empty
+    # if category:
+    #     query = query.filter(Law.category == category)
+
+    # if start_date:
+    #     # Convert Unix timestamp to datetime for comparison
+    #     start_dt = datetime.utcfromtimestamp(start_date)
+    #     query = query.filter(Law.enactment_date >= start_dt)
+
+    # if end_date:
+    #     # Convert Unix timestamp to datetime for comparison
+    #     end_dt = datetime.utcfromtimestamp(end_date)
+    #     query = query.filter(Law.enactment_date <= end_dt)
+
     return query.all()
 
 def create_user(db: Session, username: str, password_hash: str, email: str = None):
