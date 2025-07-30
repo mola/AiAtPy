@@ -180,6 +180,54 @@ def advanced_search():
         logger.error(f"Error in advanced search: {str(e)}")
         raise
 
+@rbp.route('/laws/<int:law_id>/sections', methods=['GET'])
+def get_sections_by_law_and_type(law_id):
+    """
+    Get sections by law ID and section type number
+    ---
+    tags:
+      - Sections
+    parameters:
+      - name: law_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the law
+      - name: section_type_no
+        in: query
+        type: integer
+        required: true
+        description: Section type number to filter by
+    responses:
+      200:
+        description: List of sections matching the criteria
+      400:
+        description: Missing required parameters
+      404:
+        description: Law not found or no sections found
+    """
+    try:
+        section_type_no = request.args.get('section_type_no')
+        if not section_type_no:
+            raise BadRequest("section_type_no parameter is required")
+
+        sections = get_sections_by_law_and_type(law_id, int(section_type_no))
+        if not sections:
+            raise NotFound(f"No sections found for law ID {law_id} with type {section_type_no}")
+
+        return jsonify([{
+            "id": section.ID,
+            "caption": section.CAPTION,
+            "section_text": section.SECTIONTEXT,
+            "text_order": section.TEXTORDER,
+            "section_type_no": section.SECTIONTYPENO
+        } for section in sections])
+    except ValueError:
+        raise BadRequest("section_type_no must be an integer")
+    except Exception as e:
+        logger.error(f"Error getting sections: {str(e)}")
+        raise
+
 @rbp.errorhandler(NotFound)
 def handle_not_found(e):
     return jsonify({"error": str(e)}), 404

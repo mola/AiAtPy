@@ -20,6 +20,7 @@
         "pipeline/__init__.py",
         "pipeline/comparison_task.py",
         "pipeline/paradox_detector.py",
+        "pipeline/paradox2_detector.py",
         "api_test/contradiction.py",
         "api_test/login.py",
         "api_test/rules.py"

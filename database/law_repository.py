@@ -93,3 +93,21 @@ def search_laws_with_sections(search_text: str, limit: int = 5) -> List[dict]:
         return results
     finally:
         db.close()
+
+def get_sections_by_law_and_type(law_id: int, section_type_no: int) -> List[LWSection]:
+    """
+    Get sections by law ID and section type number
+    Args:
+        law_id: The ID of the law
+        section_type_no: The section type number to filter by
+    Returns:
+        List of LWSection objects matching the criteria
+    """
+    db = RulesSessionLocal()
+    try:
+        return db.query(LWSection).filter(
+            LWSection.F_LWLAWID == law_id,
+            LWSection.SECTIONTYPENO == section_type_no
+        ).order_by(LWSection.TEXTORDER).all()
+    finally:
+        db.close()

@@ -3,6 +3,7 @@ from PySide6.QtCore import QObject, Slot, QTimer
 from flask_app import create_flask_app, start_flask
 from bridge import Bridge
 from pipeline.paradox_detector import ParadoxDetector
+from pipeline.paradox2_detector import Paradox2Detector
 
 class AppManager(QObject):
     def __init__(self, settings):
@@ -12,6 +13,7 @@ class AppManager(QObject):
         self.flask_thread = None
         self.flask_app = None
         self.paradox_detector = ParadoxDetector(self)
+        self.paradox2_detector = Paradox2Detector(self)
         self.bridge.new_analysis_task.connect(self.handle_new_task)
         self.dummy_timer = None
 
@@ -50,6 +52,11 @@ class AppManager(QObject):
     def handle_new_task(self, task_id):
         print(f"New analysis task received: {task_id}")
         self.paradox_detector.process_task(task_id)
+
+    @Slot(int)
+    def add_analysis_rules_task(self, data):
+        print(f"New analysis task received: {data}")
+        self.paradox2_detector.process_task(data)
 
     def cleanup(self):
         # Cleanup resources
