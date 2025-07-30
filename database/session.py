@@ -4,15 +4,25 @@ from sqlalchemy.orm import sessionmaker
 from aiatconfig import AiAtConfig
 from werkzeug.security import generate_password_hash
 
-Base = declarative_base()
-engine = create_engine(AiAtConfig.get_db_url())
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Base classes for each database
+MainBase = declarative_base()
+RulesBase = declarative_base()
+
+# Create engines
+main_engine = create_engine(AiAtConfig.get_db_url())
+rules_engine = create_engine("sqlite:///rules.db")
+
+MainSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=main_engine)
+RulesSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=rules_engine)
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    # Create all tables in both databases
+    MainBase.metadata.create_all(bind=main_engine)
+    # RulesBase.metadata.create_all(bind=rules_engine)
+
 
     # Create admin user if doesn't exist
-    db = SessionLocal()
+    db = MainSessionLocal()
     try:
         from .models import User
         from .crud import get_user_by_username

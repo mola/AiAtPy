@@ -1,5 +1,5 @@
 from PySide6.QtCore import QRunnable, Slot
-from database.session import SessionLocal
+from database.session import MainSessionLocal
 from database.crud import update_task_status
 from llm_connectors.deepseek_connector import DeepSeekConnector
 
@@ -25,7 +25,7 @@ class ComparisonTask(QRunnable):
             self._process_response(response)
         except Exception as e:
             print(f"Comparison failed: {str(e)}")
-            db = SessionLocal()
+            db = MainSessionLocal()
             try:
                 update_task_status(db, self.task_id, "failed", str(e))
             finally:
@@ -40,7 +40,7 @@ class ComparisonTask(QRunnable):
         )
 
     def _process_response(self, response):
-        db = SessionLocal()
+        db = MainSessionLocal()
         try:
             # Update task with partial result
             update_task_status(db, self.task_id, "processing", response)

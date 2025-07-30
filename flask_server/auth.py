@@ -1,7 +1,7 @@
 from flask_jwt_extended import JWTManager
 from werkzeug.security import check_password_hash
 from database.crud import get_user_by_username
-from database.session import SessionLocal
+from database.session import MainSessionLocal
 from database.models import User
 from aiatconfig import AiAtConfig
 
@@ -14,7 +14,7 @@ def configure_jwt(app):
     jwt.init_app(app)
 
 def authenticate_user(username, password):
-    db = SessionLocal()
+    db = MainSessionLocal()
     try:
         user = get_user_by_username(db, username)
         print("user " , user.password_hash)
@@ -44,7 +44,7 @@ def user_lookup_callback(_jwt_header, jwt_data):
     except ValueError:
         return None
         
-    db = SessionLocal()
+    db = MainSessionLocal()
     try:
         return db.query(User).filter(User.id == user_id).first()
     finally:

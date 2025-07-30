@@ -1,6 +1,6 @@
 from PySide6.QtCore import QObject, QThreadPool
-from database.session import SessionLocal
-from database.crud import get_laws_by_category_and_date, update_task_status
+from database.session import RulesSessionLocal, MainSessionLocal
+from database.crud import update_task_status
 from database.models import AnalysisTask
 from .comparison_task import ComparisonTask
 
@@ -17,7 +17,8 @@ class ParadoxDetector(QObject):
         pass
 
     def process_task(self, task_id):
-        db = SessionLocal()
+        db = MainSessionLocal()
+        db_r = RulesSessionLocal()
         try:
             task = db.query(AnalysisTask).get(task_id)
             if not task:
@@ -28,12 +29,13 @@ class ParadoxDetector(QObject):
             update_task_status(db, task_id, "processing")
             
             # Get relevant laws from database
-            existing_laws = get_laws_by_category_and_date(
-                db=db,
-                category=task.category,
-                start_date=task.start_date,
-                end_date=task.end_date
-            )
+            existing_laws = []
+            # existing_laws = get_laws_by_category_and_date(
+            #     db=db,
+            #     category=task.category,
+            #     start_date=task.start_date,
+            #     end_date=task.end_date
+            # )
             
             # Create comparison tasks
             for law in existing_laws:

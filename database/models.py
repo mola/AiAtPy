@@ -1,9 +1,9 @@
 import time
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON
-from database.session import Base
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime
+from database.session import MainBase
 
-class User(Base):
+class User(MainBase):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False)
@@ -12,7 +12,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Integer, default=1)  # 1=active, 0=inactive
 
-class AnalysisTask(Base):
+class AnalysisTask(MainBase):
     __tablename__ = 'analysis_tasks'
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False)

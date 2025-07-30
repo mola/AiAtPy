@@ -1,38 +1,38 @@
 from sqlalchemy.orm import Session
-from database.models import Law, User, AnalysisTask
+from database.models import User, AnalysisTask
 from datetime import datetime
 
-def create_law(db: Session, title: str, text: str, category: str, enactment_date: datetime):
-    db_law = Law(
-        title=title,
-        text=text,
-        category=category,
-        enactment_date=enactment_date
-    )
-    db.add(db_law)
-    db.commit()
-    db.refresh(db_law)
-    return db_law
+# def create_law(db: Session, title: str, text: str, category: str, enactment_date: datetime):
+#     db_law = Law(
+#         title=title,
+#         text=text,
+#         category=category,
+#         enactment_date=enactment_date
+#     )
+#     db.add(db_law)
+#     db.commit()
+#     db.refresh(db_law)
+#     return db_law
 
-def get_laws_by_category_and_date(db: Session, category: str, start_date: int = None, end_date: int = None):
-    query = db.query(Law)  # Start with the basic query for all laws
+# def get_laws_by_category_and_date(db: Session, category: str, start_date: int = None, end_date: int = None):
+#     query = db.query(Law)  # Start with the basic query for all laws
 
 
-    # # Check if the category is provided and not empty
-    # if category:
-    #     query = query.filter(Law.category == category)
+#     # # Check if the category is provided and not empty
+#     # if category:
+#     #     query = query.filter(Law.category == category)
 
-    # if start_date:
-    #     # Convert Unix timestamp to datetime for comparison
-    #     start_dt = datetime.utcfromtimestamp(start_date)
-    #     query = query.filter(Law.enactment_date >= start_dt)
+#     # if start_date:
+#     #     # Convert Unix timestamp to datetime for comparison
+#     #     start_dt = datetime.utcfromtimestamp(start_date)
+#     #     query = query.filter(Law.enactment_date >= start_dt)
 
-    # if end_date:
-    #     # Convert Unix timestamp to datetime for comparison
-    #     end_dt = datetime.utcfromtimestamp(end_date)
-    #     query = query.filter(Law.enactment_date <= end_dt)
+#     # if end_date:
+#     #     # Convert Unix timestamp to datetime for comparison
+#     #     end_dt = datetime.utcfromtimestamp(end_date)
+#     #     query = query.filter(Law.enactment_date <= end_dt)
 
-    return query.all()
+#     return query.all()
 
 def create_user(db: Session, username: str, password_hash: str, email: str = None):
     db_user = User(

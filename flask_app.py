@@ -5,6 +5,9 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from aiatconfig import AiAtConfig
 
+from flask_server.rules import rbp
+from flask_server import routes as api_routes
+
 def create_flask_app(settings):
     # Create Flask app and use the read static folder path (and an empty URL path)
     static_folder = settings.value("flask/static_folder", os.path.join("frontend", "build"))
@@ -28,7 +31,8 @@ def create_flask_app(settings):
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 
     # Register Flask Blueprints
-    ## app.register_blueprint(EXAMPLE API)
+    app.register_blueprint(api_routes.bp)
+    app.register_blueprint(rbp)
 
     return app
 

@@ -1,23 +1,23 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, Numeric, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from database.session import Base
+from database.session import RulesBase
 
-class HolyQuranGeneralType(Base):
+class HolyQuranGeneralType(RulesBase):
     __tablename__ = 'HolyQuranGeneralType'
     ID = Column(Numeric, primary_key=True)
     Caption = Column(String(50))
     NoAyaat = Column(Numeric)
     IsMaki = Column(Numeric)
 
-class Options(Base):
+class Options(RulesBase):
     __tablename__ = 'Options'
     Item_ID = Column(Integer, primary_key=True)
     Item_Value = Column(Text)
     Item_Text = Column(Text)
     Item_Commen = Column(Text)
 
-class CMBasketItem(Base):
+class CMBasketItem(RulesBase):
     __tablename__ = 'cmbasketitem'
     ID = Column(Numeric, primary_key=True)
     F_CMBASKETID = Column(Numeric)
@@ -28,13 +28,13 @@ class CMBasketItem(Base):
     ITEMTYPE = Column(Numeric, nullable=False)
     NOTE = Column(String(400))
 
-class CMBasket(Base):
+class CMBasket(RulesBase):
     __tablename__ = 'cmbasket'
     ID = Column(Numeric, primary_key=True)
     F_SCUSERID = Column(Numeric, nullable=False)
     CAPTION = Column(String(100), nullable=False)
 
-class Query(Base):
+class Query(RulesBase):
     __tablename__ = 'Query'
     ID = Column(Integer, primary_key=True)
     QueryTitle = Column(Text)
@@ -42,7 +42,7 @@ class Query(Base):
     User_ID = Column(Integer)
     Category = Column(Integer)
 
-class LWSectionChange(Base):
+class LWSectionChange(RulesBase):
     __tablename__ = 'lwsectionchange'
     ID = Column(Numeric, primary_key=True)
     F_LWSECTIONID_EFFECTIVE = Column(Numeric)
@@ -64,7 +64,7 @@ class LWSectionChange(Base):
     ENDDATE = Column(String(10))
     F_LWLAWCHANGEID_CHANGED = Column(Numeric)
 
-class LWUpdate(Base):
+class LWUpdate(RulesBase):
     __tablename__ = 'LWUpdate'
     ID = Column(Integer, primary_key=True)
     FromLWlog_ID = Column(Numeric, nullable=False)
@@ -75,7 +75,7 @@ class LWUpdate(Base):
     Title = Column(String(30))
     CreateDate = Column(String(15))
 
-class Section_Type(Base):
+class Section_Type(RulesBase):
     __tablename__ = 'Section_Type'
     ID = Column(Integer)
     Name = Column(String(100))
@@ -87,7 +87,7 @@ class Section_Type(Base):
     Format_Style_ID = Column(Integer)
     Section_Type_ID = Column(Integer, primary_key=True)
 
-class Format_Style(Base):
+class Format_Style(RulesBase):
     __tablename__ = 'Format_Style'
     ID = Column(Integer, primary_key=True)
     Style_Name = Column(String(50))
@@ -107,20 +107,20 @@ class Format_Style(Base):
     FontItalic = Column(Integer)
     FontUnderline = Column(Integer)
 
-class Terminologi(Base):
+class Terminologi(RulesBase):
     __tablename__ = 'Terminologi'
     ID = Column(Numeric, primary_key=True)
     Word = Column(String(100))
     Detail = Column(Text)
 
-class Dictionary(Base):
+class Dictionary(RulesBase):
     __tablename__ = 'Dictionary'
     English_Farsi_ID = Column(Integer, primary_key=True)
     English_Farsi_Text = Column(Text)
     English_Farsi_Transalates = Column(Text)
     English_Farsi = Column(Integer)
 
-class HolyQuran(Base):
+class HolyQuran(RulesBase):
     __tablename__ = 'HolyQuran'
     ID = Column(Numeric, primary_key=True)
     F_HolyQuranGeneralTypeID_NoSoreh = Column(Numeric)
@@ -129,7 +129,7 @@ class HolyQuran(Base):
     MatnFarsiAyeh = Column(String(2000))
     TranslateFarsi = Column(Text)
 
-class OpOpinionLaw(Base):
+class OpOpinionLaw(RulesBase):
     __tablename__ = 'opopinionlaw'
     ID = Column(Numeric, primary_key=True)
     F_OPOPINIONID = Column(Numeric, ForeignKey('opOpinion.ID'))
@@ -144,14 +144,14 @@ class OpOpinionLaw(Base):
     OLDSECTIONID = Column(Numeric)
     F_RULGHANOONID_TMP = Column(Numeric)
 
-class OpOpinionTopic(Base):
+class OpOpinionTopic(RulesBase):
     __tablename__ = 'opopiniontopic'
     ID = Column(Numeric, primary_key=True)
     F_OPOPINIONID = Column(Numeric, ForeignKey('opOpinion.ID'))
     F_LWTOPICID = Column(Numeric, ForeignKey('lwTopic.ID'))
     OLDID = Column(Numeric)
 
-class OpOpinion(Base):
+class OpOpinion(RulesBase):
     __tablename__ = 'opopinion'
     ID = Column(Numeric, primary_key=True)
     SUBJECT = Column(Text)
@@ -179,9 +179,9 @@ class OpOpinion(Base):
     DOSSIERCLASS = Column(String(400))
     TOTALIMAGE = Column(Numeric)
 
-class CMBaseTableType(Base):
+class CMBaseTableType(RulesBase):
     __tablename__ = 'cmbasetabletype'
-    ID = Column(Numeric)
+    ID = Column(Numeric, primary_key=True)
     CAPTION = Column(String(60), nullable=False)
     SUBSYSTEM = Column(String(20), nullable=False)
     ISREADONLY = Column(Numeric)
@@ -189,7 +189,7 @@ class CMBaseTableType(Base):
     OLDID = Column(Numeric)
     OLDID_MAJLES = Column(Numeric)
 
-class CMBaseTable(Base):
+class CMBaseTable(RulesBase):
     __tablename__ = 'cmbasetable'
     ID = Column(Numeric, primary_key=True)
     F_CMBASETABLETYPEID = Column(Numeric)
@@ -198,7 +198,7 @@ class CMBaseTable(Base):
     OLDID_NAZARAT = Column(Numeric)
     ORDERNO = Column(Numeric)
 
-class CMKeyword(Base):
+class CMKeyword(RulesBase):
     __tablename__ = 'cmkeyword'
     ID = Column(Numeric, primary_key=True)
     CAPTION = Column(String(600), nullable=False)
@@ -208,7 +208,7 @@ class CMKeyword(Base):
     ISFORCONGRESS = Column(Numeric)
     ISFOROPINION = Column(Numeric)
 
-class CMOrganization(Base):
+class CMOrganization(RulesBase):
     __tablename__ = 'cmorganization'
     ID = Column(Numeric, primary_key=True)
     CAPTION = Column(String(1000), nullable=False)
@@ -236,7 +236,7 @@ class CMOrganization(Base):
     ISPLANSIGNER = Column(Numeric)
     ISPLANOPINIONGIVER = Column(Numeric)
 
-class LWSectionKeyword(Base):
+class LWSectionKeyword(RulesBase):
     __tablename__ = 'lwsectionkeyword'
     ID = Column(Numeric, primary_key=True)
     F_LWSECTIONID = Column(Numeric, ForeignKey('lwSection.ID'))
@@ -245,7 +245,7 @@ class LWSectionKeyword(Base):
     OLDID = Column(Numeric)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
 
-class LWSectionLog(Base):
+class LWSectionLog(RulesBase):
     __tablename__ = 'lwsectionlog'
     ID = Column(Numeric, primary_key=True)
     F_LWSECTIONID = Column(Numeric, ForeignKey('lwSection.ID'))
@@ -259,7 +259,7 @@ class LWSectionLog(Base):
     OLDSTATENO = Column(Numeric)
     F_LWLAWCHANGEID = Column(Numeric, ForeignKey('lwLawChange.ID'))
 
-class LWSectionTopic(Base):
+class LWSectionTopic(RulesBase):
     __tablename__ = 'lwsectiontopic'
     ID = Column(Numeric, primary_key=True)
     F_SECTIONID = Column(Numeric, ForeignKey('lwSection.ID'))
@@ -269,12 +269,12 @@ class LWSectionTopic(Base):
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
     F_LWPHASEID = Column(Numeric, ForeignKey('lwPhase.ID'))
 
-class LWLawMainNext(Base):
+class LWLawMainNext(RulesBase):
     __tablename__ = 'LWLAWMAINNEXT'
     ID = Column(Numeric, primary_key=True)
     # Additional columns would go here based on full schema
 
-class LWLaw(Base):
+class LWLaw(RulesBase):
     __tablename__ = 'lwLaw'
     ID = Column(Numeric, primary_key=True)
     CAPTION = Column(String(4000))
@@ -307,7 +307,7 @@ class LWLaw(Base):
     ISSTRUCTURECONFIRMED = Column(Numeric)
     ISTOPICCONFIRMED = Column(Numeric)
 
-class LWLawChange(Base):
+class LWLawChange(RulesBase):
     __tablename__ = 'lwLawChange'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -334,7 +334,7 @@ class LWLawChange(Base):
     DESC1 = Column(String(500))
     DESC2 = Column(String(60))
 
-class LWLawReference(Base):
+class LWLawReference(RulesBase):
     __tablename__ = 'lwLawReference'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -346,7 +346,7 @@ class LWLawReference(Base):
     OLDID = Column(Numeric)
     ISLAWREFERRED = Column(Numeric)
 
-class LWLawRegulation(Base):
+class LWLawRegulation(RulesBase):
     __tablename__ = 'lwLawRegulation'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID_LAW = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -359,7 +359,7 @@ class LWLawRegulation(Base):
     ISREFERENCE = Column(Numeric)
     F_LWSECTIONID2 = Column(Numeric, ForeignKey('lwSection.ID'))
 
-class LWLawsectionStatus(Base):
+class LWLawsectionStatus(RulesBase):
     __tablename__ = 'lwLawsectionStatus'
     ID = Column(Numeric, primary_key=True)
     CAPTION = Column(String(250), nullable=False)
@@ -371,7 +371,7 @@ class LWLawsectionStatus(Base):
     CHANGETYPE = Column(Numeric)
     OLDID = Column(Numeric)
 
-class LWLawStructure(Base):
+class LWLawStructure(RulesBase):
     __tablename__ = 'lwLawStructure'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -382,14 +382,14 @@ class LWLawStructure(Base):
     NUMBERINGMETHOD = Column(Numeric)
     HIERARCHY = Column(String(600))
 
-class LWReceiver(Base):
+class LWReceiver(RulesBase):
     __tablename__ = 'lwReceiver'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
     F_CMORGANIZATIONID = Column(Numeric, ForeignKey('cmOrganization.ID'))
     OLDID = Column(Numeric)
 
-class LWLawFootnote(Base):
+class LWLawFootnote(RulesBase):
     __tablename__ = 'lwLawFootnote'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -400,7 +400,7 @@ class LWLawFootnote(Base):
     OLDID = Column(Numeric)
     ROWNO = Column(Numeric)
 
-class LWApprover(Base):
+class LWApprover(RulesBase):
     __tablename__ = 'lwApprover'
     ID = Column(Numeric, primary_key=True)
     F_LWPHASEID = Column(Numeric, ForeignKey('lwPhase.ID'))
@@ -409,7 +409,7 @@ class LWApprover(Base):
     DESCRIPTION = Column(String(1000))
     OLDID = Column(Numeric)
 
-class LWExecuteCondition(Base):
+class LWExecuteCondition(RulesBase):
     __tablename__ = 'lwExecuteCondition'
     ID = Column(Numeric, primary_key=True)
     F_PHASEID = Column(Numeric, ForeignKey('lwPhase.ID'))
@@ -421,7 +421,7 @@ class LWExecuteCondition(Base):
     OLDID = Column(Numeric)
     OLDF_RULGHANOONID = Column(Numeric)
 
-class LWLetter(Base):
+class LWLetter(RulesBase):
     __tablename__ = 'lwletter'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -429,14 +429,14 @@ class LWLetter(Base):
     ISTRANSFERIMAGEONLY = Column(Numeric)
     PAGECOUNT = Column(Numeric)
 
-class LWExecutor(Base):
+class LWExecutor(RulesBase):
     __tablename__ = 'lwexecutor'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
     F_CMORGANIZATIONID = Column(Numeric, ForeignKey('cmOrganization.ID'))
     OLDID = Column(Numeric)
 
-class LWLawRefer(Base):
+class LWLawRefer(RulesBase):
     __tablename__ = 'lwlawrefer'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -452,7 +452,7 @@ class LWLawRefer(Base):
     F_LWSECTIONLOGID = Column(Numeric, ForeignKey('lwSectionLog.ID'))
     ISLAWREFERRED = Column(Numeric)
 
-class PRDoc(Base):
+class PRDoc(RulesBase):
     __tablename__ = 'prdoc'
     ID = Column(Numeric, primary_key=True)
     DOCTEXT = Column(Text)
@@ -462,7 +462,7 @@ class PRDoc(Base):
     OLDID_NAZARAT = Column(Numeric)
     F_RULNAZARID = Column(Numeric)
 
-class OpOpinionGiver(Base):
+class OpOpinionGiver(RulesBase):
     __tablename__ = 'opopiniongiver'
     ID = Column(Numeric, primary_key=True)
     F_BASETABLE_OPINIONREF = Column(Numeric)
@@ -471,7 +471,7 @@ class OpOpinionGiver(Base):
     F_CMBASETABLEID_OPINIONGROUP = Column(Numeric)
     OLDID = Column(Numeric)
 
-class LWSection(Base):
+class LWSection(RulesBase):
     __tablename__ = 'lwsection'
     ID = Column(Numeric, primary_key=True)
     CAPTION = Column(String(200))
@@ -499,7 +499,7 @@ class LWSection(Base):
     F_LWLAWCHANGEID_LAST = Column(Numeric, ForeignKey('lwLawChange.ID'))
     ISINTERPRETATION = Column(Numeric)
 
-class LWPhase(Base):
+class LWPhase(RulesBase):
     __tablename__ = 'lwphase'
     ID = Column(Numeric, primary_key=True)
     F_LWLAWID = Column(Numeric, ForeignKey('lwLaw.ID'))
@@ -526,7 +526,7 @@ class LWPhase(Base):
     DESC1 = Column(String(500))
     DESC2 = Column(String(60))
 
-class LWTopic(Base):
+class LWTopic(RulesBase):
     __tablename__ = 'lwtopic'
     ID = Column(Numeric, primary_key=True)
     CODE = Column(String(20))

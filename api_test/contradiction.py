@@ -44,7 +44,7 @@ def check_contradiction():
     # cookies=auth_token
 
     if response.status_code == 201:
-        print(f"successfully.")
+        print("successfully.")
     else:
         print(f"HTTP status: {response.status_code}")
 

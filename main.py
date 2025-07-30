@@ -8,13 +8,14 @@ from PySide6.QtCore import QCoreApplication, QSettings
 CONF_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "conf")
 os.makedirs(CONF_DIR, exist_ok=True)
 
-DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "db")
-os.makedirs(DB_DIR, exist_ok=True)
+MAIN_DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "db")
+RULES_DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "db")
+os.makedirs(MAIN_DB_DIR, exist_ok=True)
 
 # SECOND: Initialize AiAtConfig before any other imports
 from aiatconfig import AiAtConfig
 AiAtConfig.set_conf_dir(CONF_DIR)
-AiAtConfig.set_conf_dbdir(DB_DIR)
+AiAtConfig.set_conf_dbdir(MAIN_DB_DIR)
 
 # Force initialization of settings
 AiAtConfig.initialize_config()

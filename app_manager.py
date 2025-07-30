@@ -2,8 +2,6 @@ import threading
 from PySide6.QtCore import QObject, Slot, QTimer
 from flask_app import create_flask_app, start_flask
 from bridge import Bridge
-from database.session import SessionLocal
-from database.crud import get_laws_by_category_and_date, update_task_status
 from pipeline.paradox_detector import ParadoxDetector
 
 class AppManager(QObject):
@@ -34,10 +32,7 @@ class AppManager(QObject):
         self.flask_app.app_manager = self  # Make AppManager accessible to Flask
         self.flask_app.bridge = self.bridge
         
-        # Register blueprints
-        from flask_server import routes as api_routes
-        self.flask_app.register_blueprint(api_routes.bp)
-        
+
         # Configure JWT
         from flask_server.auth import configure_jwt
         configure_jwt(self.flask_app)

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from database.crud import create_analysis_task, get_user_by_username
-from database.session import SessionLocal
+from database.session import MainSessionLocal
 from .auth import authenticate_user
 import uuid
 import logging
@@ -42,7 +42,7 @@ def analyze_law():
                 return jsonify({"error": f"Invalid {date_field} format. Use YYYY-MM-DD"}), 400
     
     # Create analysis task
-    db = SessionLocal()
+    db = MainSessionLocal()
     try:
         task = create_analysis_task(
             db=db,
@@ -73,7 +73,7 @@ def analyze_law():
 @bp.route('/task/<int:task_id>', methods=['GET'])
 @jwt_required()
 def get_task_status(task_id):
-    db = SessionLocal()
+    db = MainSessionLocal()
     try:
         task = db.query(AnalysisTask).filter(
             AnalysisTask.id == task_id,
