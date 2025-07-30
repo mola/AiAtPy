@@ -29,7 +29,6 @@ def authenticate_user():
         print("Invalid username or password.")
         return False
 
-# Function to add a new OPC UA user
 def check_contradiction():
     global auth_token
 
@@ -43,7 +42,27 @@ def check_contradiction():
     )
     # cookies=auth_token
 
-    if response.status_code == 201:
+    if response.status_code == 202:
+        print("successfully.")
+    else:
+        print(f"HTTP status: {response.status_code}")
+
+def check_contradiction_old_law():
+    global auth_token
+
+    law_id = 84208
+    law_section_no = 24
+    check_law_id = 184557
+
+    # Make a POST request to add the user with the authentication token
+    response = requests.post(
+        f"{API_URL}/analyze_rules",
+        json={"law_id":law_id,"section_no":law_section_no, "check_law_id":check_law_id},
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    # cookies=auth_token
+
+    if response.status_code == 202:
         print("successfully.")
     else:
         print(f"HTTP status: {response.status_code}")
@@ -54,11 +73,14 @@ if __name__ == "__main__":
         while True:
             print("\nMenu:")
             print("1. check contradiction")
+            print("2. check contradiction old law")
             print("6. Exit")
             choice = input("Choose an option: ")
 
             if choice == "1":
                 check_contradiction()
+            if choice == "2":
+                check_contradiction_old_law()
             elif choice == "6":
                 print("Exiting...")
                 break

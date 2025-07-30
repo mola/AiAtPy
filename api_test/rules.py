@@ -91,6 +91,27 @@ def get_law_section():
         print("-" * 30)
     else:
         print(f"Error: {response.status_code} - {response.text}")
+
+def get_law_section_by_no():
+    global auth_token
+    id = input("Enter law id: ")
+
+    # Make a GET request to search laws
+    response = requests.get(
+        f"{API_URL}/laws/{id}/sections",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    if response.status_code == 200:
+        laws = response.json()
+        print("\nSearch Results:")
+        print(laws)
+        # for law in laws:
+        #     print(law)
+        print("-" * 30)
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+
 # Main script
 if __name__ == "__main__":
     if authenticate_user():
@@ -99,6 +120,7 @@ if __name__ == "__main__":
             print("1. Get Law")
             print("2. Search Laws")
             print("3. Law Section")
+            print("4. Law Section No.")
             print("6. Exit")
             choice = input("Choose an option: ")
 
@@ -108,6 +130,8 @@ if __name__ == "__main__":
                 search_laws()
             elif choice == "3":
                 get_law_section()
+            elif choice == "3":
+                get_law_section_by_no()
             elif choice == "6":
                 print("Exiting...")
                 break
