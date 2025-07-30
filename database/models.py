@@ -3,15 +3,6 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON
 from database.session import Base
 
-class Law(Base):
-    __tablename__ = 'laws'
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False)
-    text = Column(Text, nullable=False)
-    category = Column(JSON)
-    enactment_date = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
