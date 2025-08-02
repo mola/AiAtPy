@@ -1,8 +1,10 @@
+# bridge.py
 from PySide6.QtCore import QObject, Signal
 from queue import Queue
 
 class Bridge(QObject):
     new_analysis_task = Signal(int)  # task_id
+    task_completed = Signal(int, str)  # task_id, result
     
     def __init__(self):
         super().__init__()

@@ -1,47 +1,56 @@
 import threading
 from PySide6.QtCore import QObject, Slot, QTimer
-from flask_app import create_flask_app, start_flask
 from bridge import Bridge
 from pipeline.paradox_detector import ParadoxDetector
 from pipeline.paradox2_detector import Paradox2Detector
+from webserver.http_server import HttpServer
+from webserver.websocket_server import WebSocketServer
+from webserver.session_manager import SessionManager
 
 class AppManager(QObject):
     def __init__(self, settings):
         super().__init__()
         self.bridge = Bridge()
         self.settings = settings
-        self.flask_thread = None
-        self.flask_app = None
         self.paradox_detector = ParadoxDetector(self)
         self.paradox2_detector = Paradox2Detector(self)
+        self.session_manager = SessionManager()
+        self.http_server = None
+        self.ws_server = None
+        
         self.bridge.new_analysis_task.connect(self.handle_new_task)
         self.dummy_timer = None
 
     def initialize(self):
+        print("Initializing application...")
         self.setup_dummy_timer()
-        self.setup_flask()
+        
+        # Initialize servers
+        self.http_server = HttpServer(
+            self.session_manager, 
+            self.bridge, 
+            self.settings.value("http_port", 8080)
+        )
+        self.ws_server = WebSocketServer(
+            self.session_manager, 
+            self.bridge, 
+            self.settings.value("ws_port", 8081)
+        )
+        
+        # Start servers
+        if not self.http_server.start():
+            print("Failed to start HTTP server")
+        if not self.ws_server.start():
+            print("Failed to start WebSocket server")
+        
         # Initialize other components
         self.paradox_detector.initialize()
+        print("Application initialized")
 
     def setup_dummy_timer(self):
         self.dummy_timer = QTimer()
         self.dummy_timer.start(1000)  # fire every 1000ms
         self.dummy_timer.timeout.connect(lambda: None)
-
-
-    def setup_flask(self):
-        self.flask_app = create_flask_app(self.settings)
-        self.flask_app.app_manager = self  # Make AppManager accessible to Flask
-        self.flask_app.bridge = self.bridge
-        
-
-        # Configure JWT
-        from flask_server.auth import configure_jwt
-        configure_jwt(self.flask_app)
-        
-        self.flask_thread = threading.Thread(target=start_flask, args=(self.flask_app,), daemon=True)
-        self.flask_thread.start()
-        print("Flask server started in a separate thread.")
 
     def add_analysis_task(self, task_id):
         """Add a new analysis task to be processed"""
@@ -59,5 +68,19 @@ class AppManager(QObject):
         self.paradox2_detector.process_task(data)
 
     def cleanup(self):
+        print("Cleaning up application...")
+
+        # Stop servers first
+        if self.http_server:
+            self.http_server.stop()
+        if self.ws_server:
+            self.ws_server.stop()
+
         # Cleanup resources
+        if self.dummy_timer:
+            self.dummy_timer.stop()
+            self.dummy_timer.deleteLater()
+            self.dummy_timer = None
+
         self.paradox_detector.cleanup()
+        print("Application cleanup complete")
