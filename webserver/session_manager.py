@@ -1,4 +1,4 @@
-# webserver/server.py
+# session_manager
 import json
 import os
 import random

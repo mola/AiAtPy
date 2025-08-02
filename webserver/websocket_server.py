@@ -1,4 +1,4 @@
-# webserver/server.py
+# websocket_server
 import json
 import os
 import string
