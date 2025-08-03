@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
+from flask_jwt_extended import (
+    jwt_required, create_access_token, get_jwt_identity,
+    create_refresh_token, set_access_cookies, set_refresh_cookies, unset_jwt_cookies)
 from database.crud import create_analysis_task, get_user_by_username
 from database.session import MainSessionLocal
 from database.session import RulesSessionLocal
@@ -22,7 +24,53 @@ def login():
         return jsonify({"error": "Invalid credentials"}), 401
     
     access_token = create_access_token(identity=user)
-    return jsonify(access_token=access_token), 200
+    refresh_token = create_refresh_token(identity=user)
+
+    resp = jsonify({'login': True})
+    set_access_cookies(resp, access_token)
+    set_refresh_cookies(resp, refresh_token)
+
+    print("Cookies being set in response:")
+    print(resp.headers.getlist('Set-Cookie'))
+
+    return resp, 200
+
+@bp.route('/token/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    # Create the new access token
+    current_user = get_jwt_identity()
+    access_token = create_access_token(identity=current_user)
+
+    # Set the JWT access cookie in the response
+    resp = jsonify({'refresh': True})
+    set_access_cookies(resp, access_token)
+    return resp, 200
+
+@bp.route('/token/remove', methods=['POST'])
+def logout():
+    resp = jsonify({'logout': True})
+    unset_jwt_cookies(resp)
+    return resp, 200
+
+@bp.after_request
+def after_request(response):
+    # Ensure credentials are allowed
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+
+    # For preflight requests
+    if request.method == 'OPTIONS':
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+
+    return response
+@bp.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
+
 
 @bp.route('/analyze', methods=['POST'])
 @jwt_required()

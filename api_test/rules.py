@@ -4,26 +4,23 @@ import getpass
 # REST API base URL
 API_URL = "http://127.0.0.1:8000/api"
 
-# Global variable to store the authentication token
-auth_token = None
+# Create a session to maintain cookies
+session = requests.Session()
 
 # Function to authenticate user and get a token
 def authenticate_user():
-    global auth_token
+    global session
     username = input("Enter username: ")
     password = getpass.getpass("Enter password: ")
 
     # Make a POST request to authenticate
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/login",  # Replace with your actual login endpoint
         json={"username": username, "password": password}
     )
 
     if response.status_code == 200:
         print("Login successful!")
-        # Extract the token from the response (adjust based on your API's response structure)
-        auth_token = response.json().get("access_token")
-        print(f"Auth token: {auth_token}")
         return True
     else:
         print("Invalid username or password.")
@@ -31,13 +28,12 @@ def authenticate_user():
 
 # Function to add a new OPC UA user
 def get_law():
-    global auth_token
-    id = input("Enter id : ")
+    global session
+    law_id = input("Enter law ID: ")
 
     # Make a POST request to add the user with the authentication token
-    response = requests.get(
-        f"{API_URL}/laws/{id}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+    response = session.get(
+        f"{API_URL}/laws/{law_id}",
     )
     # cookies=auth_token
 
@@ -48,14 +44,13 @@ def get_law():
         print(f"HTTP status: {response.status_code}")
 
 def search_laws():
-    global auth_token
+    global session
     search_text = input("Enter search text: ")
     limit = input("Enter limit (default 10): ") or "10"
 
     # Make a GET request to search laws
-    response = requests.get(
+    response = session.get(
         f"{API_URL}/laws/search",
-        headers={"Authorization": f"Bearer {auth_token}"},
         params={"q": search_text, "limit": limit}
     )
 
@@ -73,13 +68,12 @@ def search_laws():
 
 
 def get_law_section():
-    global auth_token
+    global session
     id = input("Enter law id: ")
 
     # Make a GET request to search laws
-    response = requests.get(
-        f"{API_URL}/laws/{id}/sections",
-        headers={"Authorization": f"Bearer {auth_token}"}
+    response = session.get(
+        f"{API_URL}/laws/{id}/sections"
     )
 
     if response.status_code == 200:
@@ -93,13 +87,12 @@ def get_law_section():
         print(f"Error: {response.status_code} - {response.text}")
 
 def get_law_section_by_no():
-    global auth_token
+    global session
     id = input("Enter law id: ")
 
     # Make a GET request to search laws
-    response = requests.get(
-        f"{API_URL}/laws/{id}/sections",
-        headers={"Authorization": f"Bearer {auth_token}"}
+    response = session.get(
+        f"{API_URL}/laws/{id}/sections"
     )
 
     if response.status_code == 200:

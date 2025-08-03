@@ -1,51 +1,47 @@
 import requests
 import getpass
+from urllib.parse import urlparse
 
-# REST API base URL
-API_URL = "http://127.0.0.1:8000/api"
+class AuthClient:
+    def __init__(self):
+        self.session = requests.Session()
+        self.base_url = "http://127.0.0.1:8000/api"
+        self.domain = urlparse(self.base_url).netloc.split(':')[0]
 
-# Global variable to store the authentication token
-auth_token = None
+        # Configure session to handle cookies properly
+        self.session.headers.update({
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        })
 
-# Function to authenticate user and get a token
-def authenticate_user():
-    global auth_token
-    username = input("Enter username: ")
-    password = getpass.getpass("Enter password: ")
+    def login(self):
+        username = input("Enter username: ")
+        password = getpass.getpass("Enter password: ")
 
-    # Make a POST request to authenticate
-    response = requests.post(
-        f"{API_URL}/login",  # Replace with your actual login endpoint
-        json={"username": username, "password": password}
-    )
+        response = self.session.post(
+            f"{self.base_url}/login",
+            json={"username": username, "password": password}
+        )
 
-    if response.status_code == 200:
-        print("Login successful!")
-        # Extract the token from the response (adjust based on your API's response structure)
-        auth_token = response.json().get("access_token")
-        print(f"Auth token: {auth_token}")
-        return True
-    else:
-        print("Invalid username or password.")
+        if response.status_code == 200:
+            print("Login successful!")
+            print("Received cookies:", self.session.cookies.get_dict())
+            return True
+        print(f"Login failed: {response.status_code} - {response.text}")
         return False
 
-# Main script
-if __name__ == "__main__":
-    if authenticate_user():
-        while True:
-            print("\nMenu:")
-            # print("1. Add OPC UA User")
-            # print("2. List All OPC UA Users")
-            # print("3. Get OPC UA User Details")
-            # print("4. Edit OPC UA User")
-            # print("5. Delete OPC UA User")
-            print("6. Exit")
-            choice = input("Choose an option: ")
+    def test_protected(self):
+        response = self.session.get(f"{self.base_url}/protected")
 
-            if choice == "6":
-                print("Exiting...")
-                break
-            else:
-                print("Invalid option. Please try again.")
-    else:
-        print("Authentication failed. Exiting...")
+        if response.status_code == 200:
+            print("Protected test successful!")
+            print("Response:", response.json())
+            return True
+        print(f"Test failed: {response.status_code} - {response.text}")
+        return False
+
+if __name__ == "__main__":
+    client = AuthClient()
+
+    if client.login():
+        client.test_protected()

@@ -5,6 +5,9 @@ from database.law_repository import (
     get_law_with_sections,
     search_laws_with_sections
 )
+from flask_jwt_extended import (
+    jwt_required, current_user
+    )
 from werkzeug.exceptions import BadRequest, NotFound
 import logging
 
@@ -14,6 +17,7 @@ logger = logging.getLogger(__name__)
 rbp = Blueprint('rbp', __name__, url_prefix='/api')
 
 @rbp.route('/laws/<int:law_id>', methods=['GET'])
+@jwt_required()
 def get_law(law_id):
     """
     Get a single law by its ID

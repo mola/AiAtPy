@@ -16,6 +16,7 @@ def create_flask_app(settings):
     CORS(app, resources={
         r"/api/*": {
             "origins": "*",
+            "supports_credentials": True,
             "allow_headers": ["Content-Type", "Authorization"],
         }
     },
