@@ -4,6 +4,7 @@ from .base_router import BaseRouter
 from PySide6.QtCore import Slot
 from PySide6.QtHttpServer import QHttpServer, QHttpServerRequest, QHttpServerResponse
 from database.crud import create_analysis_task
+from database.session import MainSessionLocal
 
 class AnalysisRouter(BaseRouter):
     def setup_routes(self, server):
@@ -28,10 +29,6 @@ class AnalysisRouter(BaseRouter):
         try:
             data = request.body().data().decode('utf-8')
             json_data = json.loads(data)
-            prompt = json_data.get('prompt')
-            category = json_data.get('category')
-            start_date = json_data.get('start_date')
-            end_date = json_data.get('end_date')
         except:
             return QHttpServerResponse("Invalid request", 
                                        QHttpServerResponse.StatusCode.BadRequest)
@@ -41,11 +38,8 @@ class AnalysisRouter(BaseRouter):
         try:
             task = create_analysis_task(
                 db, 
-                user_id, 
-                prompt, 
-                category, 
-                start_date, 
-                end_date
+                user_id,
+                json_data
             )
             db.commit()
             
