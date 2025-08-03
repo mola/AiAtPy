@@ -48,18 +48,11 @@ def create_user(db: Session, username: str, password_hash: str, email: str = Non
 def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
-def create_analysis_task(db: Session, user_id: int, prompt: str, category: str = None, 
-                         start_date: str = None, end_date: str = None):
+def create_analysis_task(db: Session, user_id: int, data):
     # Convert date strings to Unix timestamps
-    start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp()) if start_date else None
-    end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp()) if end_date else None
-    
     db_task = AnalysisTask(
         user_id=user_id,
-        prompt=prompt,
-        category=category,
-        start_date=start_ts,
-        end_date=end_ts
+        data=data
     )
     db.add(db_task)
     db.commit()

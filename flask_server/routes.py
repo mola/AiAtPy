@@ -31,27 +31,16 @@ def analyze_law():
     user_id = get_jwt_identity()
     
     # Validate required fields
-    if 'prompt' not in data:
-        return jsonify({"error": "Missing 'prompt' in request"}), 400
-    
-    # Validate date formats
-    for date_field in ['start_date', 'end_date']:
-        if date_field in data:
-            try:
-                datetime.strptime(data[date_field], "%Y-%m-%d")
-            except ValueError:
-                return jsonify({"error": f"Invalid {date_field} format. Use YYYY-MM-DD"}), 400
-    
+    if 'data' not in data:
+        return jsonify({"error": "Missing 'data' in request"}), 400
+       
     # Create analysis task
     db = MainSessionLocal()
     try:
         task = create_analysis_task(
             db=db,
             user_id=user_id,
-            prompt=data['prompt'],
-            category=data.get('category'),
-            start_date=data.get('start_date'),
-            end_date=data.get('end_date')
+            prompt=data['data'],
         )
         
         # FIX: Use current_app instead of app
