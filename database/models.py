@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, Json
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON
 from database.session import MainBase
 
 class User(MainBase):
@@ -16,6 +16,6 @@ class AnalysisTask(MainBase):
     __tablename__ = 'analysis_tasks'
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False)
-    data = Column(Json)
+    data = Column(JSON)
     status = Column(String(20), default='pending')
     created_at = Column(BigInteger, default=lambda: int(time.time()))  # Current Unix timestamp
