@@ -36,7 +36,7 @@ def initialize_settings():
 
     defaults = {
         "flask/secret_key": "your_secret_key_here",
-        "flask/static_folder": os.path.join("frontend", "build"),
+        "flask/static_folder": "frontend",
     }
 
     for key, value in defaults.items():

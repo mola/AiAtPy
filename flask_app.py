@@ -10,7 +10,7 @@ from flask_server import routes as api_routes
 
 def create_flask_app(settings):
     # Create Flask app and use the read static folder path (and an empty URL path)
-    static_folder = settings.value("flask/static_folder", os.path.join("frontend", "build"))
+    static_folder = settings.value("flask/static_folder", "frontend")
     app = Flask(__name__, static_folder=static_folder, static_url_path="")
     
     CORS(app, resources={
