@@ -6,6 +6,7 @@ from flask_jwt_extended import (
 from database.crud import create_analysis_task, get_user_by_username
 from database.session import MainSessionLocal
 from database.session import RulesSessionLocal
+from database.models import AnalysisTask
 from .auth import authenticate_user
 import uuid
 import logging
@@ -181,7 +182,7 @@ def get_task_status(task_id):
             "task_id": task.id,
             "status": task.status,
             "result": task.result if task.result else "Result not available yet",
-            "created_at": task.created_at.isoformat()
+            "created_at": task.created_at
         })
     finally:
         db.close()
