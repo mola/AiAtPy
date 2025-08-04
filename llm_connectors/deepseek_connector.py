@@ -9,7 +9,7 @@ class DeepSeekConnector(BaseConnector):
         super().__init__()
 
         api_key = AiAtConfig.get_deepseek_api_key()
-        print("APIKEY : " ,api_key)
+        # print("APIKEY : " ,api_key)
         self.client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
     def send_message(self, message1, message2):

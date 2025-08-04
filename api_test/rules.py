@@ -39,7 +39,7 @@ def get_law():
 
     if response.status_code == 200:
         print(response.json())
-        print(f"successfully.")
+        print("successfully.")
     else:
         print(f"HTTP status: {response.status_code}")
 

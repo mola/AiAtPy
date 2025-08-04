@@ -6,10 +6,11 @@ from database.law_repository import (
     search_laws_with_sections
 )
 from flask_jwt_extended import (
-    jwt_required, current_user
+    jwt_required
     )
 from werkzeug.exceptions import BadRequest, NotFound
 import logging
+from database.models_rules import LWTopic
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -249,3 +250,88 @@ def handle_bad_request(e):
 def handle_exception(e):
     logger.exception("An unexpected error occurred")
     return jsonify({"error": "Internal server error"}), 500
+
+@rbp.route('/topics', methods=['GET'])
+@jwt_required()
+def get_topics():
+    """
+    Get all topics or search by caption
+    ---
+    tags:
+      - Topics
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: false
+        description: Search query for topic caption
+      - name: limit
+        in: query
+        type: integer
+        required: false
+        default: 100
+        description: Maximum number of results to return
+    responses:
+      200:
+        description: List of topics
+    """
+    try:
+        search_text = request.args.get('q')
+        limit = int(request.args.get('limit', 100))
+
+        # Query the database
+        query = LWTopic.query
+
+        if search_text:
+            query = query.filter(LWTopic.CAPTION.ilike(f'%{search_text}%'))
+
+        topics = query.limit(limit).all()
+
+        return jsonify([{
+            "id": topic.ID,
+            "code": topic.CODE,
+            "caption": topic.CAPTION,
+            "parent_id": topic.F_PARENTID,
+            "hierarchy": topic.HIERARCHY
+        } for topic in topics])
+
+    except Exception as e:
+        logger.error(f"Error getting topics: {str(e)}")
+        raise
+
+@rbp.route('/topics/<int:topic_id>', methods=['GET'])
+@jwt_required()
+def get_topic(topic_id):
+    """
+    Get a single topic by its ID
+    ---
+    tags:
+      - Topics
+    parameters:
+      - name: topic_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the topic to retrieve
+    responses:
+      200:
+        description: Topic details
+      404:
+        description: Topic not found
+    """
+    try:
+        topic = LWTopic.query.get(topic_id)
+        if not topic:
+            raise NotFound(f"Topic with ID {topic_id} not found")
+
+        return jsonify({
+            "id": topic.ID,
+            "code": topic.CODE,
+            "caption": topic.CAPTION,
+            "parent_id": topic.F_PARENTID,
+            "hierarchy": topic.HIERARCHY,
+            "old_id": topic.OLDID
+        })
+    except Exception as e:
+        logger.error(f"Error getting topic {topic_id}: {str(e)}")
+        raise

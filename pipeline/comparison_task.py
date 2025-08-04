@@ -19,8 +19,8 @@ class ComparisonTask(QRunnable):
             # prompt = self._format_comparison_prompt()
             
             # Get LLM response
-            # response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
-            response = "test_response"
+            response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
+            # response = "test_response"
 
             # Create result dictionary
             result = {
