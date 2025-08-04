@@ -4,11 +4,13 @@ from database.crud import update_task_status
 from llm_connectors.deepseek_connector import DeepSeekConnector
 
 class ComparisonTask(QRunnable):
-    def __init__(self, task_id, new_law_text, existing_law_text):
+    def __init__(self, task_id, new_law_text, existing_law_text, detector, section_data):
         super().__init__()
         self.task_id = task_id
         self.new_law_text = new_law_text
         self.existing_law_text = existing_law_text
+        self.detector = detector
+        self.section_data = section_data
         self.llm_connector = DeepSeekConnector()
 
     def run(self):
@@ -18,18 +20,18 @@ class ComparisonTask(QRunnable):
             
             # Get LLM response
             response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
-            # response = "hello"
-            print(response)
-            # Process response and update task
 
-            self._process_response(response)
+            # Create result dictionary
+            result = {
+                **self.section_data,
+                'reason': response
+            }
+            # print("prompt -- " , self.existing_law_text)
+
+            self.detector.handle_comparison_complete(self.task_id, result)
+            # print(response)
         except Exception as e:
             print(f"Comparison failed: {str(e)}")
-            db = MainSessionLocal()
-            try:
-                update_task_status(db, self.task_id, "failed", str(e))
-            finally:
-                db.close()
 
     def _format_comparison_prompt(self):
         return (
@@ -38,11 +40,3 @@ class ComparisonTask(QRunnable):
             f"EXISTING LAW TEXT:\n{self.existing_law_text}\n\n"
             "ANALYSIS:"
         )
-
-    def _process_response(self, response):
-        db = MainSessionLocal()
-        try:
-            # Update task with partial result
-            update_task_status(db, self.task_id, "processing", response)
-        finally:
-            db.close()
