@@ -6,7 +6,7 @@ from flask_jwt_extended import (
 from database.crud import create_analysis_task, get_user_by_username
 from database.session import MainSessionLocal
 from database.session import RulesSessionLocal
-from database.models import AnalysisTask
+from database.models import AnalysisTask,ComparisonResult
 from .auth import authenticate_user
 import uuid
 import logging
@@ -167,8 +167,12 @@ def analyze_rules():
 @bp.route('/task/<int:task_id>', methods=['GET'])
 @jwt_required()
 def get_task_status(task_id):
+    # Get optional timestamp parameter from query string
+    since_timestamp = request.args.get('since', type=int)
+    
     db = MainSessionLocal()
     try:
+        # Get the main task
         task = db.query(AnalysisTask).filter(
             AnalysisTask.id == task_id,
             AnalysisTask.user_id == get_jwt_identity()
@@ -176,15 +180,45 @@ def get_task_status(task_id):
         
         if not task:
             return jsonify({"error": "Task not found"}), 404
-            
-        # Returning the task status along with the result (if available)
+        
+        # Query comparison results with optional timestamp filter
+        results_query = db.query(ComparisonResult).filter(
+            ComparisonResult.task_id == task_id
+        )
+        
+        if since_timestamp is not None:
+            results_query = results_query.filter(
+                ComparisonResult.finish_time > since_timestamp
+            )
+        
+        comparison_results = results_query.order_by(
+            ComparisonResult.finish_time.asc()
+        ).all()
+        
+        # Format results as array of JSON objects
+        results_data = [{
+            'id': result.id,
+            'first_law_id': result.first_law_id,
+            'first_section_id': result.first_section_id,
+            'second_law_id': result.second_law_id,
+            'second_section_id': result.second_section_id,
+            'response': result.response,
+            'contradiction': result.contradiction,
+            'finish_time': result.finish_time
+        } for result in comparison_results]
+        
+        # Get the latest timestamp for client-side tracking
+        latest_timestamp = max(
+            [r.finish_time for r in comparison_results] or [0]
+        )
+        
         return jsonify({
             "task_id": task.id,
             "status": task.status,
-            "result": task.result if task.result else "Result not available yet",
-            "created_at": task.created_at
+            "created_at": task.created_at,
+            "results": results_data,
+            "latest_timestamp": latest_timestamp
         })
     finally:
         db.close()
-
         
