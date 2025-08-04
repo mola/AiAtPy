@@ -20,13 +20,13 @@ class Paradox2Detector(QObject):
     def process_task(self, data):
         db = MainSessionLocal()
         db_r = RulesSessionLocal()
+        task_id = -1
         try:
 
             # Extract data from JSON
             law_id = data.get('law_id')
             section_no = data.get('section_no')
             check_law_id = data.get('check_law_id')
-            task_id = 0
 
             # Get the section text for the current law/section
             current_section = db_r.query(LWSection.SECTIONTEXT).filter(LWSection.F_LWLAWID == law_id,LWSection.SECTIONTYPENO == section_no).first()

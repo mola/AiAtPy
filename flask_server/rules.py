@@ -97,11 +97,11 @@ def search_laws():
         logger.error(f"Error searching laws: {str(e)}")
         raise
 
-@rbp.route('/laws/<int:law_id>/sections', methods=['GET'])
+@rbp.route('/laws/<int:law_id>/sections/<int:id>', methods=['GET'])
 @jwt_required()
-def get_law_sections(law_id):
+def get_law_section(law_id, id):
     """
-    Get a law with all its sections
+    Get a specific section from a law
     ---
     tags:
       - Laws
@@ -110,33 +110,36 @@ def get_law_sections(law_id):
         in: path
         type: integer
         required: true
-        description: ID of the law to retrieve
+        description: ID of the law
+      - name: id
+        in: path
+        type: integer
+        required: true
+        description: ID of the section to retrieve
     responses:
       200:
-        description: Law with sections
+        description: Section details
       404:
-        description: Law not found
+        description: Law or section not found
     """
     try:
         result = get_law_with_sections(law_id)
         if not result:
             raise NotFound(f"Law with ID {law_id} not found")
 
+        section = next((s for s in result["sections"] if s.ID == id), None)
+        if not section:
+            raise NotFound(f"Section with ID {id} not found in law {law_id}")
+
         return jsonify({
-            "law": {
-                "id": result["law"].ID,
-                "caption": result["law"].CAPTION
-            },
-            "sections": [{
-                "id": section.ID,
-                "caption": section.CAPTION,
-                "text": section.SECTIONTEXT,
-                "order": section.TEXTORDER,
-                "section_no": section.SECTIONTYPENO
-            } for section in result["sections"]]
+            "id": section.ID,
+            "caption": section.CAPTION,
+            "text": section.SECTIONTEXT,
+            "order": section.TEXTORDER,
+            "section_no": section.SECTIONTYPENO
         })
     except Exception as e:
-        logger.error(f"Error getting law sections {law_id}: {str(e)}")
+        logger.error(f"Error getting law section {law_id}/{id}: {str(e)}")
         raise
 
 @rbp.route('/laws/search/advanced', methods=['GET'])

@@ -89,10 +89,11 @@ def get_law_section():
 def get_law_section_by_no():
     global session
     id = input("Enter law id: ")
+    ids = input("Enter section id: ")
 
     # Make a GET request to search laws
     response = session.get(
-        f"{API_URL}/laws/{id}/sections"
+        f"{API_URL}/laws/{id}/sections/{ids}"
     )
 
     if response.status_code == 200:
@@ -123,7 +124,7 @@ if __name__ == "__main__":
                 search_laws()
             elif choice == "3":
                 get_law_section()
-            elif choice == "3":
+            elif choice == "4":
                 get_law_section_by_no()
             elif choice == "6":
                 print("Exiting...")
