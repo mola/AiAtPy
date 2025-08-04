@@ -56,7 +56,11 @@ def logout():
 @bp.after_request
 def after_request(response):
     # Ensure credentials are allowed
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    # response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    # response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8000')
+    # response.headers.add('Access-Control-Allow-Credentials', 'true')
+    # response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    # response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
 
     # For preflight requests
     if request.method == 'OPTIONS':

@@ -53,6 +53,7 @@ def get_law(law_id):
         raise
 
 @rbp.route('/laws/search', methods=['GET'])
+@jwt_required()
 def search_laws():
     """
     Search laws by text content
@@ -96,6 +97,7 @@ def search_laws():
         raise
 
 @rbp.route('/laws/<int:law_id>/sections', methods=['GET'])
+@jwt_required()
 def get_law_sections(law_id):
     """
     Get a law with all its sections
@@ -136,6 +138,7 @@ def get_law_sections(law_id):
         raise
 
 @rbp.route('/laws/search/advanced', methods=['GET'])
+@jwt_required()
 def advanced_search():
     """
     Advanced search with highlighted matches
@@ -185,6 +188,7 @@ def advanced_search():
         raise
 
 @rbp.route('/laws/<int:law_id>/sections', methods=['GET'])
+@jwt_required()
 def get_sections_by_law_and_type(law_id):
     """
     Get sections by law ID and section type number
