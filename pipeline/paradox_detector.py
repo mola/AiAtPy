@@ -1,7 +1,7 @@
 from PySide6.QtCore import QObject, QThreadPool, Signal
 from database.session import RulesSessionLocal, MainSessionLocal
 from database.crud import update_task_status
-from database.models import AnalysisTask
+from database.models import AnalysisTask,ComparisonResult
 from .comparison_task import ComparisonTask
 from database.models_rules import LWSection
 from typing import Dict, List
@@ -31,7 +31,6 @@ class ParadoxDetector(QObject):
                 print(f"Task {task_id} not found")
                 return
             
-            print("task_data", task.data)
             task_data = task.data
             
             # Update task status
@@ -52,16 +51,13 @@ class ParadoxDetector(QObject):
                     LWSection.F_LWLAWID == law_id
                 ).all()
 
-                print("sections : " , sections)
-
                 if not sections:
                     raise ValueError(f"No sections found for law {law_id}")
 
                 # Initialize tracking for this task
                 self.active_tasks[task_id] = {
                     'total': len(sections),
-                    'completed': 0,
-                    'results': []
+                    'completed': 0
                 }
 
                 # Create comparison tasks
@@ -74,7 +70,6 @@ class ParadoxDetector(QObject):
                         section_data={
                             'first_law_id': law_id,
                             'first_section_id': int(section.ID),
-                            'prompt':task_data.get('prompt', ''),
                             'second_law_id': None,
                             'second_section_id': None
                         }
@@ -99,28 +94,40 @@ class ParadoxDetector(QObject):
         if task_id not in self.active_tasks:
             return
 
-        self.active_tasks[task_id]['results'].append(result)
-        self.active_tasks[task_id]['completed'] += 1
+        # Store the result in the database immediately
+        db = MainSessionLocal()
+        try:
+            # Create new ComparisonResult record
+            comparison_result = ComparisonResult(
+                task_id=task_id,
+                first_law_id=result['first_law_id'],
+                first_section_id=result['first_section_id'],
+                second_law_id=result.get('second_law_id'),
+                second_section_id=result.get('second_section_id'),
+                response=result['reason'],
+                contradiction=result['contradiction']
+            )
+            db.add(comparison_result)
+            db.commit()
+            
+            # Track completion
+            self.active_tasks[task_id]['completed'] += 1
 
-        # Check if all tasks are complete
-        if (self.active_tasks[task_id]['completed'] >= 
-            self.active_tasks[task_id]['total']):
-            
-            # All tasks complete, emit signal
-            results = self.active_tasks[task_id]['results']
-            self.all_comparisons_complete.emit(task_id, results)
-            
-            # Update database
-            db = MainSessionLocal()
-            try:
-                update_task_status(
-                    db, 
-                    task_id, 
-                    "completed", 
-                    json.dumps(results)
-                )
-            finally:
-                db.close()
-            
-            # Clean up
-            del self.active_tasks[task_id]
+            # Check if all tasks are complete
+            if (self.active_tasks[task_id]['completed'] >= 
+                self.active_tasks[task_id]['total']):
+                
+                # All tasks complete, emit signal
+                self.all_comparisons_complete.emit(task_id, [])
+                
+                # Update main task status (no results in JSON anymore)
+                update_task_status(db, task_id, "completed")
+                
+                # Clean up
+                del self.active_tasks[task_id]
+        except Exception as e:
+            db.rollback()
+            print(f"Error storing comparison result: {str(e)}")
+            update_task_status(db, task_id, "failed", str(e))
+        finally:
+            db.close()

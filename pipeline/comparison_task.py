@@ -19,14 +19,15 @@ class ComparisonTask(QRunnable):
             # prompt = self._format_comparison_prompt()
             
             # Get LLM response
-            response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
+            # response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
+            response = "test_response"
 
             # Create result dictionary
             result = {
                 **self.section_data,
-                'reason': response
+                'reason': response,
+                'contradiction': True
             }
-            # print("prompt -- " , self.existing_law_text)
 
             self.detector.handle_comparison_complete(self.task_id, result)
             # print(response)

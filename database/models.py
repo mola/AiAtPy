@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON,Boolean
 from database.session import MainBase
 
 class User(MainBase):
@@ -20,3 +20,16 @@ class AnalysisTask(MainBase):
     status = Column(String(20), default='pending')
     result = Column(Text)
     created_at = Column(BigInteger, default=lambda: int(time.time()))  # Current Unix timestamp
+
+class ComparisonResult(MainBase):
+    __tablename__ = 'comparison_results'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, nullable=False, index=True)
+    first_law_id = Column(Integer, nullable=False)
+    first_section_id = Column(Integer, nullable=False)
+    second_law_id = Column(Integer)
+    second_section_id = Column(Integer)
+    response = Column(Text)
+    contradiction = Column(Boolean)
+    finish_time = Column(BigInteger, default=lambda: int(time.time())) 
