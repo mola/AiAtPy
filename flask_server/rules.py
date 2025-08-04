@@ -130,7 +130,7 @@ def get_law_sections(law_id):
                 "id": section.ID,
                 "caption": section.CAPTION,
                 "text": section.SECTIONTEXT,
-                "order": section.TEXTORDER
+                "order": section.SECTIONTYPENO
             } for section in result["sections"]]
         })
     except Exception as e:
