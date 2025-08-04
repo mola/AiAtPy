@@ -50,12 +50,12 @@ class AppManager(QObject):
         
     @Slot(int)
     def handle_new_task(self, task_id):
-        print(f"New analysis task received: {task_id}")
+        print(f"New analysis task received task id: {task_id}")
         self.paradox_detector.process_task(task_id)
 
     @Slot(int)
     def add_analysis_rules_task(self, data):
-        print(f"New analysis task received: {data}")
+        print(f"New analysis task received task id: {data}")
         self.paradox2_detector.process_task(data)
 
     def cleanup(self):
