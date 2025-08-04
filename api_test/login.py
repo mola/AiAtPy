@@ -44,4 +44,16 @@ if __name__ == "__main__":
     client = AuthClient()
 
     if client.login():
-        client.test_protected()
+        while True:
+            print("\nMenu:")
+            print("1. Test")
+            print("6. Exit")
+            choice = input("Choose an option: ")
+
+            if choice == "1":
+                client.test_protected()
+            elif choice == "6":
+                print("Exiting...")
+                break
+            else:
+                print("Invalid option. Please try again.")
