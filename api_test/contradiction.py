@@ -9,10 +9,8 @@ session = requests.Session()
 
 # Function to authenticate user and get a token
 def authenticate_user():
-    # username = input("Enter username: ")
-    username = "admin"
-    # password = getpass.getpass("Enter password: ")
-    password = "admin"
+    username = input("Enter username: ")
+    password = getpass.getpass("Enter password: ")
 
     # Make a POST request to authenticate
     response = session.post(
@@ -28,12 +26,15 @@ def authenticate_user():
         return False
 
 def check_contradiction():
+    text = """ماده24ـ جهت تسريع در امر اكتشاف و بهره برداري از معادن ، دستگاههاي اجرائي و متوليان قانوني مربوط مكلفند حداكثر ظرف دو ماه نسبت به استعلام وزارت صنعت ، معدن و تجارت جهت صدور پروانه اكتشاف در موارد ذيل اعلام نظر نمايند : <br> الف ـ حريم قانوني راهها و راه آهن <br> ب ـ داخل شهر ها و حريم قانوني آنها <br> پ ـ حريم قانوني سدها و شبكه هاي توزيع آب و حوضچه هاي سدها و قنوات <br> ت ـ داخل جنگلها و مراتع <br> ث ـ حريم اماكن مقدسه و ابنيه تاريخي <br> ج ـ حريم پادگانها و محل استقرار نيروهاي مسلح <br> چ ـ مناطقي با عنوان پارك ملي ، آثار طبيعي ملي ، پناهگاه حيات وحش و حفاظت شده <br> ح ـ حوزه هاي داراي مواد پرتوزا بيش از حد مجاز <br> استعلام از دستگاههاي اجرائي ذي ربط ، توسط وزارت صنعت ، معدن و تجارت و فقط يك بار براي صدور پروانه اكتشاف انجام مي گيرد . پروانه اكتشاف توسط وزارت صنعت ، معدن و تجارت حداكثر سه ماه پس از استعلام صادر مي شود . اعلام نظر بايد براي كل محدوده مورد تقاضا صورت گيرد و عدم اعلام نظر در مهلت مقرر به منزله موافقت دستگاههاي مذكور تلقي مي شود ."""
 
-    text = "test_prompt"
     # Make a POST request to add the user with the authentication token
     response = session.post(
         f"{API_URL}/analyze",
-        json={"prompt": text, "check_law_id":86601}
+        json={
+            "prompt": text,
+            "check_law_id":184557
+        }
     )
     # cookies=auth_token
 
