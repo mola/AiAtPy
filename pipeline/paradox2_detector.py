@@ -30,33 +30,40 @@ class Paradox2Detector(QObject):
                 return
 
             task_data = task.data
+             # Update task status
+            update_task_status(db, task_id, "processing")
+            
+            if task_data.get('compare_all', False):
+                # TODO: Implement logic for comparing to all laws
+                print("Comparing to all laws - implementation pending")
+                update_task_status(db, task_id, "completed", "All laws comparison not yet implemented")
+            else:
+                # Extract data from JSON
+                law_id = task_data.get('law_id')
+                section_no = task_data.get('section_no')
+                check_law_id = task_data.get('check_law_id')
+                system_prompt = task_data.get('system_prompt')
 
-            # Extract data from JSON
-            law_id = task_data.get('law_id')
-            section_no = task_data.get('section_no')
-            check_law_id = task_data.get('check_law_id')
-            system_prompt = task_data.get('system_prompt')
+                # Get the section text for the current law/section
+                current_section = db_r.query(LWSection.SECTIONTEXT).filter(LWSection.F_LWLAWID == law_id,LWSection.SECTIONTYPENO == section_no).first()
 
-            # Get the section text for the current law/section
-            current_section = db_r.query(LWSection.SECTIONTEXT).filter(LWSection.F_LWLAWID == law_id,LWSection.SECTIONTYPENO == section_no).first()
+                if not current_section:
+                    raise ValueError("Section not found")
 
-            if not current_section:
-                raise ValueError("Section not found")
+                task_prompt = current_section.SECTIONTEXT
 
-            task_prompt = current_section.SECTIONTEXT
+                # Get all sections from the check_law_id excluding F_LWLAWSTRUCTUREID = 57
+                sections = db_r.query(LWSection).filter(
+                    LWSection.F_LWLAWID == check_law_id,
+                    LWSection.F_LWLAWSTRUCTUREID != 57
+                ).all()
 
-            # Get all sections from the check_law_id excluding F_LWLAWSTRUCTUREID = 57
-            sections = db_r.query(LWSection).filter(
-                LWSection.F_LWLAWID == check_law_id,
-                LWSection.F_LWLAWSTRUCTUREID != 57
-            ).all()
-
-            # Create a dictionary to organize sections by parent-child relationships
-            section_dict = {section.ID: section for section in sections}
-
+                # Create a dictionary to organize sections by parent-child relationships
+                section_dict = {section.ID: section for section in sections}
 
             task_list = []
-            counter = 0            
+            counter = 0 
+            
             # Create comparison tasks
             for section in sections:
                 # If it's a parent section (F_PARENTID is NULL or doesn't exist in our dict)
@@ -88,7 +95,6 @@ class Paradox2Detector(QObject):
                     )
                     task_list.append(comparison_task)
 
-            
             # Initialize tracking for this task
             self.active_tasks[task_id] = {
                 'total': len(task_list),
@@ -96,7 +102,6 @@ class Paradox2Detector(QObject):
             }
             for t in task_list:
                 self.thread_pool.start(t)
-
         except Exception as e:
             print(f"Error processing task {task_id}: {str(e)}")
             update_task_status(db, task_id, "failed", str(e))
