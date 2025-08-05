@@ -1,7 +1,10 @@
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from database.models_rules import LWLaw, LWSection
+from database.models_rules import (
+        LWLaw, LWSection,LWLawsectionStatus,
+        LWTopic, LWSectionTopic
+    )
 from database.session import RulesSessionLocal
 
 def get_lwlaw_by_id(law_id: int) -> Optional[LWLaw]:
@@ -109,5 +112,48 @@ def get_sections_by_law_and_type(law_id: int, section_type_no: int) -> List[LWSe
             LWSection.F_LWLAWID == law_id,
             LWSection.SECTIONTYPENO == section_type_no
         ).order_by(LWSection.TEXTORDER).all()
+    finally:
+        db.close()
+
+def search_section_by_id(section_id: int) -> Optional[dict]:
+    """
+    Get a single section by its ID with its status caption and topic captions
+    Args:
+        section_id: The ID of the section to retrieve
+    Returns:
+        Dictionary containing section, status_caption, and topics if found, None otherwise
+    """
+    db = RulesSessionLocal()
+    try:
+        # Get section with status caption
+        result = db.query(
+            LWSection,
+            LWLawsectionStatus.CAPTION.label('status_caption'),
+            func.group_concat(LWTopic.CAPTION).label('topic_captions')
+        ).outerjoin(
+            LWLawsectionStatus,
+            LWSection.F_CMBASETABLEID_SECTIONSTATUS == LWLawsectionStatus.ID
+        ).outerjoin(
+            LWSectionTopic,
+            LWSection.ID == LWSectionTopic.F_SECTIONID
+        ).outerjoin(
+            LWTopic,
+            LWSectionTopic.F_TOPICID == LWTopic.ID
+        ).filter(
+            LWSection.ID == section_id
+        ).group_by(
+            LWSection.ID
+        ).first()
+
+        if not result:
+            return None
+
+        section, status_caption, topic_captions = result
+
+        return {
+            "section": section,
+            "status_caption": status_caption,
+            "topics": topic_captions.split(',') if topic_captions else []
+        }
     finally:
         db.close()

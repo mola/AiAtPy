@@ -3,14 +3,16 @@ from database.law_repository import (
     get_lwlaw_by_id,
     search_laws_by_text,
     get_law_with_sections,
-    search_laws_with_sections
+    search_laws_with_sections,
+    search_section_by_id
 )
 from flask_jwt_extended import (
     jwt_required
     )
 from werkzeug.exceptions import BadRequest, NotFound
 import logging
-from database.models_rules import LWTopic
+from database.models_rules import LWTopic , LWSection
+from database.session import RulesSessionLocal
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -353,10 +355,12 @@ def get_section_by_id(section_id):
         description: Section not found
     """
     try:
-        # Assuming you have a function to get section by ID from your repository
-        section = db.session.query(LWSection).filter(LWSection.ID == section_id).first()
-        if not section:
+        result = search_section_by_id(section_id)
+        if not result:
             raise NotFound(f"Section with ID {section_id} not found")
+
+        section = result["section"]
+        status_caption = result["status_caption"]
 
         return jsonify({
             "id": section.ID,
@@ -368,7 +372,8 @@ def get_section_by_id(section_id):
             "full_path": section.FULLPATH,
             "law_id": section.F_LWLAWID,
             "parent_id": section.F_PARENTID,
-            "status": section.F_CMBASETABLEID_SECTIONSTATUS
+            "status_caption": status_caption,
+            "topics": result["topics"]
         })
     except Exception as e:
         logger.error(f"Error getting section {section_id}: {str(e)}")

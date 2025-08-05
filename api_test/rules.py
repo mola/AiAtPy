@@ -106,6 +106,24 @@ def get_law_section_by_no():
     else:
         print(f"Error: {response.status_code} - {response.text}")
 
+def get_section():
+    global session
+    ids = input("Enter section id: ")
+
+    # Make a GET request to search laws
+    response = session.get(
+        f"{API_URL}/sections/{ids}"
+    )
+
+    if response.status_code == 200:
+        laws = response.json()
+        print("\nSearch Results:")
+        print(laws)
+        # for law in laws:
+        #     print(law)
+        print("-" * 30)
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
 # Main script
 if __name__ == "__main__":
     if authenticate_user():
@@ -115,6 +133,7 @@ if __name__ == "__main__":
             print("2. Search Laws")
             print("3. Law Section")
             print("4. Law Section No.")
+            print("5. Section")
             print("6. Exit")
             choice = input("Choose an option: ")
 
@@ -126,6 +145,8 @@ if __name__ == "__main__":
                 get_law_section()
             elif choice == "4":
                 get_law_section_by_no()
+            elif choice == "5":
+                get_section()
             elif choice == "6":
                 print("Exiting...")
                 break
