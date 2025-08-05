@@ -1,17 +1,20 @@
-from PySide6.QtCore import QObject, QThreadPool
+from PySide6.QtCore import QObject, QThreadPool, Signal
 from database.session import RulesSessionLocal, MainSessionLocal
 from database.crud import update_task_status
-from database.models import AnalysisTask
+from database.models import AnalysisTask, ComparisonResult
 from .comparison_task import ComparisonTask
 from database.models_rules import LWSection
 
 class Paradox2Detector(QObject):
+    all_comparisons_complete = Signal(int, list)  # task_id, results
+
     def __init__(self, app_manager):
         super().__init__()
         self.app_manager = app_manager
-        self.thread_pool = QThreadPool.globalInstance()
+        self.thread_pool = QThreadPool()
         # Set max threads (e.g., 4-8 depending on system capabilities)
-        self.thread_pool.setMaxThreadCount(4)
+        self.thread_pool.setMaxThreadCount(8)
+        self.active_tasks: Dict[int, Dict] = {}
 
     def initialize(self):
         # Initialize any resources needed
@@ -41,21 +44,50 @@ class Paradox2Detector(QObject):
 
             task_prompt = current_section.SECTIONTEXT
 
-            # Get all sections from the check_law_id
-            existing_laws = db_r.query(LWSection).filter(
-                LWSection.F_LWLAWID == check_law_id
+            # Get all sections from the check_law_id excluding F_LWLAWSTRUCTUREID = 57
+            sections = db_r.query(LWSection).filter(
+                LWSection.F_LWLAWID == check_law_id,
+                LWSection.F_LWLAWSTRUCTUREID != 57
             ).all()
 
-            print (task_prompt)
+            # Create a dictionary to organize sections by parent-child relationships
+            section_dict = {section.ID: section for section in sections}
+
+            # Initialize tracking for this task
+            self.active_tasks[task_id] = {
+                'total': len(sections),
+                'completed': 0
+            }
+                            # Create comparison tasks
             # Create comparison tasks
-            for law in existing_laws:
-                comparison_task = ComparisonTask(
-                    task_id=task_id,
-                    new_law_text=task_prompt,
-                    existing_law_text=law.SECTIONTEXT
-                )
-                self.thread_pool.start(comparison_task)
-                
+            for section in sections:
+                # If it's a parent section (F_PARENTID is NULL or doesn't exist in our dict)
+                if section.F_PARENTID is None or section.F_PARENTID not in section_dict:
+                    # Start with the current section's text
+                    combined_text = section.SECTIONTEXT or ""
+                    
+                    # Find all child sections
+                    child_sections = [s for s in sections if s.F_PARENTID == section.ID]
+                    
+                    # Append child sections' text
+                    for child in child_sections:
+                        if child.SECTIONTEXT:
+                            combined_text += "\n\n" + child.SECTIONTEXT
+                    
+                    # Create comparison task with combined text
+                    comparison_task = ComparisonTask(
+                        task_id=task_id,
+                        new_law_text=task_prompt,
+                        existing_law_text=combined_text,
+                        detector=self,
+                        section_data={
+                            'first_law_id': law_id,
+                            'first_section_id': int(section.ID),
+                            'second_law_id': law_id,
+                            'second_section_id': int(section_no)
+                        }
+                    )
+                    self.thread_pool.start(comparison_task)                
         except Exception as e:
             print(f"Error processing task {task_id}: {str(e)}")
             update_task_status(db, task_id, "failed", str(e))
@@ -65,3 +97,46 @@ class Paradox2Detector(QObject):
     def cleanup(self):
         # Wait for all threads to finish
         self.thread_pool.waitForDone()
+
+    def handle_comparison_complete(self, task_id: int, result: dict):
+        """Called when a single comparison task completes"""
+        if task_id not in self.active_tasks:
+            return
+
+        # Store the result in the database immediately
+        db = MainSessionLocal()
+        try:
+            # Create new ComparisonResult record
+            comparison_result = ComparisonResult(
+                task_id=task_id,
+                first_law_id=result['first_law_id'],
+                first_section_id=result['first_section_id'],
+                second_law_id=result.get('second_law_id'),
+                second_section_id=result.get('second_section_id'),
+                response=result['reason'],
+                contradiction=result['contradiction']
+            )
+            db.add(comparison_result)
+            db.commit()
+            
+            # Track completion
+            self.active_tasks[task_id]['completed'] += 1
+
+            # Check if all tasks are complete
+            if (self.active_tasks[task_id]['completed'] >= 
+                self.active_tasks[task_id]['total']):
+                
+                # All tasks complete, emit signal
+                self.all_comparisons_complete.emit(task_id, [])
+                
+                # Update main task status (no results in JSON anymore)
+                update_task_status(db, task_id, "completed")
+                
+                # Clean up
+                del self.active_tasks[task_id]
+        except Exception as e:
+            db.rollback()
+            print(f"Error storing comparison result: {str(e)}")
+            update_task_status(db, task_id, "failed", str(e))
+        finally:
+            db.close()
