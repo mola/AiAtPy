@@ -20,13 +20,16 @@ class ComparisonTask(QRunnable):
             
             # Get LLM response
             response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
-            # response = "test_response"
-
+            
+            # Extract values with defaults
+            why_text = response.get('why', 'No explanation provided')
+            contradiction = response.get('Contradiction', False)  # Default to False if missing
+            
             # Create result dictionary
             result = {
                 **self.section_data,
-                'reason': response,
-                'contradiction': True
+                'reason': why_text,
+                'contradiction': contradiction
             }
 
             self.detector.handle_comparison_complete(self.task_id, result)
