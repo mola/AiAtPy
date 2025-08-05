@@ -10,6 +10,7 @@ from database.models_rules import LWSection, LWLaw
 from .auth import authenticate_user
 import uuid,logging,json
 from datetime import datetime
+from sqlalchemy import func 
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('api', __name__, url_prefix='/api')
@@ -96,6 +97,8 @@ def analyze_law():
         task_data = {
             "type": "custom",
             "prompt": data['prompt'],
+            "prompt_title": data.get('prompt_title'),
+            "system_prompt": data.get('system_prompt'),
             "check_law_id": data['check_law_id'],
             "compare_all": data['check_law_id'] == "*"
         }
@@ -253,6 +256,61 @@ def get_task_status(task_id):
             "results": results_data,
             "latest_timestamp": latest_timestamp
         })
+    finally:
+        db.close()
+        db_r.close()
+
+
+@bp.route('/tasks', methods=['GET'])
+@jwt_required()
+def get_tasks():
+    db = MainSessionLocal()
+    db_r = RulesSessionLocal()
+    try:
+        user_id = get_jwt_identity()
+        
+        # Get all tasks for the current user
+        tasks = db.query(AnalysisTask).filter(
+            AnalysisTask.user_id == user_id
+        ).order_by(AnalysisTask.created_at.desc()).all()
+        
+        tasks_data = []
+        for task in tasks:
+            # Parse task data JSON
+            task_json = task.data if task.data else {}
+            
+            # Get the latest finish time from comparison results
+            latest_comparison = db.query(
+                func.max(ComparisonResult.finish_time)
+            ).filter(
+                ComparisonResult.task_id == task.id
+            ).scalar()
+            
+            # Determine title based on task type
+            title = None
+            if task_json.get('type') == 'custom':
+                title = task_json.get('prompt_title')
+            elif task_json.get('type') == 'existing':
+                law_id = task_json.get('law_id')
+                if law_id:
+                    law = db_r.query(LWLaw.CAPTION).filter(
+                        LWLaw.ID == law_id
+                    ).first()
+                    title = law.CAPTION if law else None
+            
+            tasks_data.append({
+                'task_id': task.id,
+                'type': task_json.get('type'),
+                'compare_all': task_json.get('compare_all', False),
+                'check_law_id': task_json.get('check_law_id'),
+                'status': task.status,
+                'created_at': task.created_at,
+                'finished_at': latest_comparison,
+                'result': task.result,
+                'title': title
+            })
+        
+        return jsonify(tasks_data)
     finally:
         db.close()
         db_r.close()
