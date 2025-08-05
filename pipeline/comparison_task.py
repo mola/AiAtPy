@@ -13,6 +13,10 @@ class ComparisonTask(QRunnable):
         self.section_data = section_data
         self.llm_connector = DeepSeekConnector()
 
+        sc = section_data.get("system_prompt")
+        if (sc and len(sc)>0):
+            self.llm_connector.setSystemPrompt(sc)
+
     def run(self):
         try:
             # Format the prompt for LLM comparison
@@ -20,15 +24,13 @@ class ComparisonTask(QRunnable):
             
             # Get LLM response
             response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
-            
-            # Extract values with defaults
-            why_text = response.get('why', 'No explanation provided')
-            contradiction = response.get('Contradiction', False)  # Default to False if missing
+
+            contradiction = response.get('is_contradiction', False)  # Default to False if missing
             
             # Create result dictionary
             result = {
                 **self.section_data,
-                'reason': why_text,
+                'reason': response,
                 'contradiction': contradiction
             }
 

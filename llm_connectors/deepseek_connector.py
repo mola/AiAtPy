@@ -9,15 +9,19 @@ class DeepSeekConnector(BaseConnector):
     def __init__(self):
         super().__init__()
 
+        self.system_prompt = "These messages contain law-related information. Compare these two law texts and identify if they contradict each other. Please identify and find contradictions in the text. Return as JSON with 'why' in persian language and 'Contradiction' keys. 'Contradiction' type as True or False"
         api_key = AiAtConfig.get_deepseek_api_key()
         # print("APIKEY : " ,api_key)
         self.client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
+    def setSystemPrompt(self, text):
+        self.system_prompt = text
+        
     def send_message(self, message1, message2):
         response = self.client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "These messages contain law-related information. Compare these two law texts and identify if they contradict each other. Please identify and find contradictions in the text. Return as JSON with 'why' in persian language and 'Contradiction' keys. 'Contradiction' type as True or False"},
+                {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": message1},
                 {"role": "user", "content": message2},
             ],
