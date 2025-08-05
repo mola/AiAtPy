@@ -2,6 +2,7 @@ from PySide6.QtCore import QObject, Signal
 from llm_connectors.base_connector import BaseConnector
 from openai import OpenAI
 from aiatconfig import AiAtConfig
+import json
 
 class DeepSeekConnector(BaseConnector):
 
