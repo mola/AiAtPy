@@ -331,3 +331,45 @@ def get_topic(topic_id):
     except Exception as e:
         logger.error(f"Error getting topic {topic_id}: {str(e)}")
         raise
+
+@rbp.route('/sections/<int:section_id>', methods=['GET'])
+@jwt_required()
+def get_section_by_id(section_id):
+    """
+    Get a specific section by its ID
+    ---
+    tags:
+      - Sections
+    parameters:
+      - name: section_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the section to retrieve
+    responses:
+      200:
+        description: Section details
+      404:
+        description: Section not found
+    """
+    try:
+        # Assuming you have a function to get section by ID from your repository
+        section = db.session.query(LWSection).filter(LWSection.ID == section_id).first()
+        if not section:
+            raise NotFound(f"Section with ID {section_id} not found")
+
+        return jsonify({
+            "id": section.ID,
+            "caption": section.CAPTION,
+            "text": section.SECTIONTEXT,
+            "order": section.TEXTORDER,
+            "section_no": section.SECTIONTYPENO,
+            "section_level": section.SECTIONLEVEL,
+            "full_path": section.FULLPATH,
+            "law_id": section.F_LWLAWID,
+            "parent_id": section.F_PARENTID,
+            "status": section.F_CMBASETABLEID_SECTIONSTATUS
+        })
+    except Exception as e:
+        logger.error(f"Error getting section {section_id}: {str(e)}")
+        raise
