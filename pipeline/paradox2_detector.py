@@ -35,6 +35,7 @@ class Paradox2Detector(QObject):
             law_id = task_data.get('law_id')
             section_no = task_data.get('section_no')
             check_law_id = task_data.get('check_law_id')
+            system_prompt = task_data.get('system_prompt')
 
             # Get the section text for the current law/section
             current_section = db_r.query(LWSection.SECTIONTEXT).filter(LWSection.F_LWLAWID == law_id,LWSection.SECTIONTYPENO == section_no).first()
@@ -53,12 +54,9 @@ class Paradox2Detector(QObject):
             # Create a dictionary to organize sections by parent-child relationships
             section_dict = {section.ID: section for section in sections}
 
-            # Initialize tracking for this task
-            self.active_tasks[task_id] = {
-                'total': len(sections),
-                'completed': 0
-            }
-                            # Create comparison tasks
+
+            task_list = []
+            counter = 0            
             # Create comparison tasks
             for section in sections:
                 # If it's a parent section (F_PARENTID is NULL or doesn't exist in our dict)
@@ -84,10 +82,21 @@ class Paradox2Detector(QObject):
                             'first_law_id': law_id,
                             'first_section_id': int(section.ID),
                             'second_law_id': law_id,
-                            'second_section_id': int(section_no)
+                            'second_section_id': int(section_no),
+                            'system_prompt': system_prompt
                         }
                     )
-                    self.thread_pool.start(comparison_task)                
+                    task_list.append(comparison_task)
+
+            
+            # Initialize tracking for this task
+            self.active_tasks[task_id] = {
+                'total': len(task_list),
+                'completed': 0
+            }
+            for t in task_list:
+                self.thread_pool.start(t)
+
         except Exception as e:
             print(f"Error processing task {task_id}: {str(e)}")
             update_task_status(db, task_id, "failed", str(e))
