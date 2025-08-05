@@ -30,8 +30,7 @@ class Paradox2Detector(QObject):
                 return
 
             task_data = task.data
-            
-            # Update task status
+             # Update task status
             update_task_status(db, task_id, "processing")
             
             if task_data.get('compare_all', False):
@@ -43,6 +42,7 @@ class Paradox2Detector(QObject):
                 law_id = task_data.get('law_id')
                 section_no = task_data.get('section_no')
                 check_law_id = task_data.get('check_law_id')
+                system_prompt = task_data.get('system_prompt')
 
                 # Get the section text for the current law/section
                 current_section = db_r.query(LWSection.SECTIONTEXT).filter(LWSection.F_LWLAWID == law_id,LWSection.SECTIONTYPENO == section_no).first()
@@ -61,42 +61,47 @@ class Paradox2Detector(QObject):
                 # Create a dictionary to organize sections by parent-child relationships
                 section_dict = {section.ID: section for section in sections}
 
-                # Initialize tracking for this task
-                self.active_tasks[task_id] = {
-                    'total': len(sections),
-                    'completed': 0
-                }
-                                # Create comparison tasks
-                # Create comparison tasks
-                for section in sections:
-                    # If it's a parent section (F_PARENTID is NULL or doesn't exist in our dict)
-                    if section.F_PARENTID is None or section.F_PARENTID not in section_dict:
-                        # Start with the current section's text
-                        combined_text = section.SECTIONTEXT or ""
-                        
-                        # Find all child sections
-                        child_sections = [s for s in sections if s.F_PARENTID == section.ID]
-                        
-                        # Append child sections' text
-                        for child in child_sections:
-                            if child.SECTIONTEXT:
-                                combined_text += "\n\n" + child.SECTIONTEXT
-                        
-                        # Create comparison task with combined text
-                        comparison_task = ComparisonTask(
-                            task_id=task_id,
-                            new_law_text=task_prompt,
-                            existing_law_text=combined_text,
-                            detector=self,
-                            section_data={
-                                'first_law_id': law_id,
-                                'first_section_id': int(section.ID),
-                                'second_law_id': law_id,
-                                'second_section_id': int(section_no)
-                            }
-                        )
-                        self.thread_pool.start(comparison_task)  
-                                      
+            task_list = []
+            counter = 0 
+            
+            # Create comparison tasks
+            for section in sections:
+                # If it's a parent section (F_PARENTID is NULL or doesn't exist in our dict)
+                if section.F_PARENTID is None or section.F_PARENTID not in section_dict:
+                    # Start with the current section's text
+                    combined_text = section.SECTIONTEXT or ""
+                    
+                    # Find all child sections
+                    child_sections = [s for s in sections if s.F_PARENTID == section.ID]
+                    
+                    # Append child sections' text
+                    for child in child_sections:
+                        if child.SECTIONTEXT:
+                            combined_text += "\n\n" + child.SECTIONTEXT
+                    
+                    # Create comparison task with combined text
+                    comparison_task = ComparisonTask(
+                        task_id=task_id,
+                        new_law_text=task_prompt,
+                        existing_law_text=combined_text,
+                        detector=self,
+                        section_data={
+                            'first_law_id': law_id,
+                            'first_section_id': int(section.ID),
+                            'second_law_id': law_id,
+                            'second_section_id': int(section_no),
+                            'system_prompt': system_prompt
+                        }
+                    )
+                    task_list.append(comparison_task)
+
+            # Initialize tracking for this task
+            self.active_tasks[task_id] = {
+                'total': len(task_list),
+                'completed': 0
+            }
+            for t in task_list:
+                self.thread_pool.start(t)
         except Exception as e:
             print(f"Error processing task {task_id}: {str(e)}")
             update_task_status(db, task_id, "failed", str(e))
