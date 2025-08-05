@@ -30,6 +30,6 @@ class ComparisonResult(MainBase):
     first_section_id = Column(Integer, nullable=False)
     second_law_id = Column(Integer)
     second_section_id = Column(Integer)
-    response = Column(Text)
+    response = Column(JSON)
     contradiction = Column(Boolean)
     finish_time = Column(BigInteger, default=lambda: int(time.time())) 

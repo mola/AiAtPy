@@ -4,12 +4,11 @@ from flask_jwt_extended import (
     jwt_required, create_access_token, get_jwt_identity,
     create_refresh_token, set_access_cookies, set_refresh_cookies, unset_jwt_cookies)
 from database.crud import create_analysis_task, get_user_by_username
-from database.session import MainSessionLocal
-from database.session import RulesSessionLocal
+from database.session import MainSessionLocal, RulesSessionLocal
 from database.models import AnalysisTask,ComparisonResult
+from database.models_rules import LWSection, LWLaw
 from .auth import authenticate_user
-import uuid
-import logging
+import uuid,logging,json
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -171,6 +170,7 @@ def get_task_status(task_id):
     since_timestamp = request.args.get('since', type=int)
     
     db = MainSessionLocal()
+    db_r = RulesSessionLocal()
     try:
         # Get the main task
         task = db.query(AnalysisTask).filter(
@@ -195,17 +195,51 @@ def get_task_status(task_id):
             ComparisonResult.finish_time.asc()
         ).all()
         
-        # Format results as array of JSON objects
-        results_data = [{
-            'id': result.id,
-            'first_law_id': result.first_law_id,
-            'first_section_id': result.first_section_id,
-            'second_law_id': result.second_law_id,
-            'second_section_id': result.second_section_id,
-            'response': result.response,
-            'contradiction': result.contradiction,
-            'finish_time': result.finish_time
-        } for result in comparison_results]
+        # Format results as array of JSON objects with additional captions
+        results_data = []
+
+        for result in comparison_results:
+                    # Get first section caption
+                    first_section = db_r.query(LWSection.FULLPATH).filter(
+                        LWSection.ID == result.first_section_id
+                    ).first()
+                    first_section_caption = first_section.FULLPATH if first_section else None
+                    
+                    # Get second section caption
+                    second_section = db_r.query(LWSection.FULLPATH).filter(
+                        LWSection.ID == result.second_section_id
+                    ).first()
+                    second_section_caption = second_section.FULLPATH if second_section else None
+                    
+                    # Get first law caption
+                    first_law = db_r.query(LWLaw.CAPTION).filter(
+                        LWLaw.ID == result.first_law_id
+                    ).first()
+                    first_law_caption = first_law.CAPTION if first_law else None
+                    
+                    # Get second law caption
+                    second_law = db_r.query(LWLaw.CAPTION).filter(
+                        LWLaw.ID == result.second_law_id
+                    ).first()
+                    second_law_caption = second_law.CAPTION if second_law else None
+
+                    # Extract why from response JSON (no parsing needed now)
+                    why_value = result.response.get('why', '') if result.response else ''
+                    
+                    results_data.append({
+                        'id': result.id,
+                        'first_law_id': result.first_law_id,
+                        'first_law_caption': first_law_caption,
+                        'first_section_id': result.first_section_id,
+                        'first_section_caption': first_section_caption,
+                        'second_law_id': result.second_law_id,
+                        'second_law_caption': second_law_caption,
+                        'second_section_id': result.second_section_id,
+                        'second_section_caption': second_section_caption,
+                        'response': why_value,
+                        'contradiction': result.contradiction,
+                        'finish_time': result.finish_time
+                    })
         
         # Get the latest timestamp for client-side tracking
         latest_timestamp = max(
@@ -221,4 +255,4 @@ def get_task_status(task_id):
         })
     finally:
         db.close()
-        
+        db_r.close()
