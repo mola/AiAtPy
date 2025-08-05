@@ -23,7 +23,16 @@ class DeepSeekConnector(BaseConnector):
             stream=False,
             temperature=0.3
         )
-        return response.choices[0].message.content
-        # self.on_message_received(response.choices[0].message.content)
-
-
+        content = response.choices[0].message.content
+        
+        # Remove Markdown code block markers (```json and ```)
+        if content.startswith('```json') and content.endswith('```'):
+            content = content[7:-3].strip()  # Remove ```json and ```
+        elif content.startswith('```') and content.endswith('```'):
+            content = content[3:-3].strip()  # Remove ``` and ```
+        
+        # Try parsing JSON, return empty dict if invalid
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {}
