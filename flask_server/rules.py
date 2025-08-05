@@ -97,11 +97,11 @@ def search_laws():
         logger.error(f"Error searching laws: {str(e)}")
         raise
 
-@rbp.route('/laws/<int:law_id>/sections/<int:id>', methods=['GET'])
+@rbp.route('/laws/<int:law_id>/sections', methods=['GET'])
 @jwt_required()
-def get_law_section(law_id, id):
+def get_law_sections(law_id):
     """
-    Get a specific section from a law
+    Get all sections for a specific law
     ---
     tags:
       - Laws
@@ -111,11 +111,53 @@ def get_law_section(law_id, id):
         type: integer
         required: true
         description: ID of the law
-      - name: id
+    responses:
+      200:
+        description: List of all sections for the law
+      404:
+        description: Law not found or no sections available
+    """
+    try:
+        result = get_law_with_sections(law_id)
+        if not result or not result.get("sections"):
+            raise NotFound(f"No sections found for law ID {law_id}")
+
+        return jsonify({
+            "law": {
+            "id": result["law"].ID,
+            "caption": result["law"].CAPTION
+            },
+            "sections": [{
+            "id": section.ID,
+            "caption": section.CAPTION,
+            "text": section.SECTIONTEXT,
+            "order": section.TEXTORDER,
+            "section_no": section.SECTIONTYPENO
+            } for section in result["sections"]]
+        })
+    except Exception as e:
+        logger.error(f"Error getting sections for law {law_id}: {str(e)}")
+        raise
+
+@rbp.route('/laws/<int:law_id>/sections/<int:section_no>', methods=['GET'])
+@jwt_required()
+def get_specific_section(law_id, section_no):
+    """
+    Get a specific section from a law by section number
+    ---
+    tags:
+      - Laws
+    parameters:
+      - name: law_id
         in: path
         type: integer
         required: true
-        description: ID of the section to retrieve
+        description: ID of the law
+      - name: section_no
+        in: path
+        type: integer
+        required: true
+        description: Section number to retrieve
     responses:
       200:
         description: Section details
@@ -127,9 +169,9 @@ def get_law_section(law_id, id):
         if not result:
             raise NotFound(f"Law with ID {law_id} not found")
 
-        section = next((s for s in result["sections"] if s.ID == id), None)
+        section = next((s for s in result["sections"] if s.SECTIONTYPENO == section_no), None)
         if not section:
-            raise NotFound(f"Section with ID {id} not found in law {law_id}")
+            raise NotFound(f"Section {section_no} not found in law {law_id}")
 
         return jsonify({
             "id": section.ID,
@@ -139,7 +181,7 @@ def get_law_section(law_id, id):
             "section_no": section.SECTIONTYPENO
         })
     except Exception as e:
-        logger.error(f"Error getting law section {law_id}/{id}: {str(e)}")
+        logger.error(f"Error getting section {section_no} from law {law_id}: {str(e)}")
         raise
 
 @rbp.route('/laws/search/advanced', methods=['GET'])
@@ -190,55 +232,6 @@ def advanced_search():
         } for result in results])
     except Exception as e:
         logger.error(f"Error in advanced search: {str(e)}")
-        raise
-
-@rbp.route('/laws/<int:law_id>/sections', methods=['GET'])
-@jwt_required()
-def get_sections_by_law_and_type(law_id):
-    """
-    Get sections by law ID and section type number
-    ---
-    tags:
-      - Sections
-    parameters:
-      - name: law_id
-        in: path
-        type: integer
-        required: true
-        description: ID of the law
-      - name: section_type_no
-        in: query
-        type: integer
-        required: true
-        description: Section type number to filter by
-    responses:
-      200:
-        description: List of sections matching the criteria
-      400:
-        description: Missing required parameters
-      404:
-        description: Law not found or no sections found
-    """
-    try:
-        section_type_no = request.args.get('section_type_no')
-        if not section_type_no:
-            raise BadRequest("section_type_no parameter is required")
-
-        sections = get_sections_by_law_and_type(law_id, int(section_type_no))
-        if not sections:
-            raise NotFound(f"No sections found for law ID {law_id} with type {section_type_no}")
-
-        return jsonify([{
-            "id": section.ID,
-            "caption": section.CAPTION,
-            "section_text": section.SECTIONTEXT,
-            "text_order": section.TEXTORDER,
-            "section_type_no": section.SECTIONTYPENO
-        } for section in sections])
-    except ValueError:
-        raise BadRequest("section_type_no must be an integer")
-    except Exception as e:
-        logger.error(f"Error getting sections: {str(e)}")
         raise
 
 @rbp.errorhandler(NotFound)

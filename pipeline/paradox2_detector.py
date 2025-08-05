@@ -17,16 +17,21 @@ class Paradox2Detector(QObject):
         # Initialize any resources needed
         pass
 
-    def process_task(self, data):
+    def process_task(self, task_id):
         db = MainSessionLocal()
         db_r = RulesSessionLocal()
-        task_id = -1
         try:
+            task = db.query(AnalysisTask).get(task_id)
+            if not task:
+                print(f"Task {task_id} not found")
+                return
+
+            task_data = task.data
 
             # Extract data from JSON
-            law_id = data.get('law_id')
-            section_no = data.get('section_no')
-            check_law_id = data.get('check_law_id')
+            law_id = task_data.get('law_id')
+            section_no = task_data.get('section_no')
+            check_law_id = task_data.get('check_law_id')
 
             # Get the section text for the current law/section
             current_section = db_r.query(LWSection.SECTIONTEXT).filter(LWSection.F_LWLAWID == law_id,LWSection.SECTIONTYPENO == section_no).first()
