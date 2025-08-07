@@ -75,10 +75,14 @@ def analyze_existing_law(law_id, section_no, check_law_id):
         print(f"Error starting analysis. HTTP status: {response.status_code}")
         return None
 
-def get_task_status(task_id, since_timestamp=None):
+def get_task_status(task_id, since_timestamp=None, contradiction_filter=None):
     params = {}
+    
     if since_timestamp is not None:
         params['since'] = since_timestamp
+    
+    if contradiction_filter is not None:
+        params['contradiction'] = contradiction_filter
     
     response = session.get(
         f"{API_URL}/task/{task_id}",
@@ -223,7 +227,8 @@ if __name__ == "__main__":
                 analyze_existing_law(law_id, section_no, "*")
             elif choice == "5":
                 task_id = input("Enter task ID to check: ")
-                get_task_status(int(task_id))
+                contradiction_filter = input_with_default("Only those with contradiction?", str(True))
+                get_task_status(int(task_id) , contradiction_filter=contradiction_filter)
             elif choice == "6":
                 task_id = input("Enter task ID to check: ")
                 timestamp = input("Enter timestamp to check: ")

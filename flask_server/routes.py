@@ -169,11 +169,13 @@ def analyze_rules():
 @bp.route('/task/<int:task_id>', methods=['GET'])
 @jwt_required()
 def get_task_status(task_id):
-    # Get optional timestamp parameter from query string
+    # Get optional timestamp and contradiction filter parameters from query string
     since_timestamp = request.args.get('since', type=int)
-    
+    contradiction_filter = request.args.get('contradiction', type=str)
+
     db = MainSessionLocal()
     db_r = RulesSessionLocal()
+    
     try:
         # Get the main task
         task = db.query(AnalysisTask).filter(
@@ -184,15 +186,26 @@ def get_task_status(task_id):
         if not task:
             return jsonify({"error": "Task not found"}), 404
         
-        # Query comparison results with optional timestamp filter
+        # Query comparison results with optional timestamp and contradiction filter
         results_query = db.query(ComparisonResult).filter(
             ComparisonResult.task_id == task_id
         )
-        
+
         if since_timestamp is not None:
             results_query = results_query.filter(
                 ComparisonResult.finish_time > since_timestamp
             )
+        
+        if contradiction_filter is not None:
+            # Convert contradiction_filter to boolean value
+            if contradiction_filter.lower() == 'true':
+                results_query = results_query.filter(
+                    ComparisonResult.contradiction == True
+                )
+            elif contradiction_filter.lower() == 'false':
+                results_query = results_query.filter(
+                    ComparisonResult.contradiction == False
+                )
         
         comparison_results = results_query.order_by(
             ComparisonResult.finish_time.asc()
@@ -202,47 +215,47 @@ def get_task_status(task_id):
         results_data = []
 
         for result in comparison_results:
-                    # Get first section caption
-                    first_section = db_r.query(LWSection.FULLPATH).filter(
-                        LWSection.ID == result.first_section_id
-                    ).first()
-                    first_section_caption = first_section.FULLPATH if first_section else None
-                    
-                    # Get second section caption
-                    second_section = db_r.query(LWSection.FULLPATH).filter(
-                        LWSection.ID == result.second_section_id
-                    ).first()
-                    second_section_caption = second_section.FULLPATH if second_section else None
-                    
-                    # Get first law caption
-                    first_law = db_r.query(LWLaw.CAPTION).filter(
-                        LWLaw.ID == result.first_law_id
-                    ).first()
-                    first_law_caption = first_law.CAPTION if first_law else None
-                    
-                    # Get second law caption
-                    second_law = db_r.query(LWLaw.CAPTION).filter(
-                        LWLaw.ID == result.second_law_id
-                    ).first()
-                    second_law_caption = second_law.CAPTION if second_law else None
+            # Get first section caption
+            first_section = db_r.query(LWSection.FULLPATH).filter(
+                LWSection.ID == result.first_section_id
+            ).first()
+            first_section_caption = first_section.FULLPATH if first_section else None
 
-                    # Extract why from response JSON (no parsing needed now)
-                    why_value = result.response.get('why', '') if result.response else ''
-                    
-                    results_data.append({
-                        'id': result.id,
-                        'first_law_id': result.first_law_id,
-                        'first_law_caption': first_law_caption,
-                        'first_section_id': result.first_section_id,
-                        'first_section_caption': first_section_caption,
-                        'second_law_id': result.second_law_id,
-                        'second_law_caption': second_law_caption,
-                        'second_section_id': result.second_section_id,
-                        'second_section_caption': second_section_caption,
-                        'response': why_value,
-                        'contradiction': result.contradiction,
-                        'finish_time': result.finish_time
-                    })
+            # Get second section caption
+            second_section = db_r.query(LWSection.FULLPATH).filter(
+                LWSection.ID == result.second_section_id
+            ).first()
+            second_section_caption = second_section.FULLPATH if second_section else None
+
+            # Get first law caption
+            first_law = db_r.query(LWLaw.CAPTION).filter(
+                LWLaw.ID == result.first_law_id
+            ).first()
+            first_law_caption = first_law.CAPTION if first_law else None
+
+            # Get second law caption
+            second_law = db_r.query(LWLaw.CAPTION).filter(
+                LWLaw.ID == result.second_law_id
+            ).first()
+            second_law_caption = second_law.CAPTION if second_law else None
+
+            # Extract why from response JSON (no parsing needed now)
+            why_value = result.response.get('why', '') if result.response else ''
+            
+            results_data.append({
+                'id': result.id,
+                'first_law_id': result.first_law_id,
+                'first_law_caption': first_law_caption,
+                'first_section_id': result.first_section_id,
+                'first_section_caption': first_section_caption,
+                'second_law_id': result.second_law_id,
+                'second_law_caption': second_law_caption,
+                'second_section_id': result.second_section_id,
+                'second_section_caption': second_section_caption,
+                'response': why_value,
+                'contradiction': result.contradiction,
+                'finish_time': result.finish_time
+            })
         
         # Get the latest timestamp for client-side tracking
         latest_timestamp = max(
