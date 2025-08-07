@@ -90,6 +90,8 @@ def analyze_law():
     if 'check_law_id' not in data:
         return jsonify({"error": "Missing 'check_law_id' in request"}), 400
     
+    topic_ids = data.get('topic_ids', [])  # Default to an empty list if not provided
+
     # Create analysis task
     db = MainSessionLocal()
     try:
@@ -100,7 +102,8 @@ def analyze_law():
             "prompt_title": data.get('prompt_title'),
             "system_prompt": data.get('system_prompt'),
             "check_law_id": data['check_law_id'],
-            "compare_all": data['check_law_id'] == "*"
+            "compare_all": data['check_law_id'] == "*",
+            "topic_ids": topic_ids # Store the list of topic_ids when compare all
         }
         
         task = create_analysis_task(
@@ -134,6 +137,8 @@ def analyze_rules():
         if field not in data:
             return jsonify({"error": f"Missing '{field}' in request"}), 400
 
+    topic_ids = data.get('topic_ids', [])  # Default to an empty list if not provided
+
     # Create analysis task
     db = MainSessionLocal()
     try:
@@ -143,7 +148,8 @@ def analyze_rules():
             "law_id": data['law_id'],
             "section_no": data['section_no'],
             "check_law_id": data['check_law_id'],
-            "compare_all": data['check_law_id'] == "*"
+            "compare_all": data['check_law_id'] == "*",
+            "topic_ids": topic_ids # Store the list of topic_ids when compare all
         }
         
         task = create_analysis_task(
