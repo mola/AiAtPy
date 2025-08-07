@@ -17,16 +17,24 @@ def get_lwlaw_by_id(law_id: int) -> Optional[LWLaw]:
     finally:
         db.close()
 
-def search_laws_by_text(search_text: str, limit: int = 10) -> List[LWLaw]:
+def search_laws_by_text(search_text: str, topic_ids: list, limit: int = 10) -> List[LWLaw]:
     """
     Search laws using full-text search on section content
-    Returns laws that have sections matching the search text
+    Returns laws that have sections matching the search text and belong to the given topic IDs
     """
     db = RulesSessionLocal()
     try:
-        return db.query(LWLaw).filter(
-            LWLaw.CAPTION.ilike(f"%{search_text}%")
+        # Join LWLaw with LWSection and LWSectionTopic to filter by topic
+        laws = db.query(LWLaw).join(
+            LWSection, LWSection.F_LWLAWID == LWLaw.ID
+        ).join(
+            LWSectionTopic, LWSectionTopic.F_SECTIONID == LWSection.ID
+        ).filter(
+            LWLaw.CAPTION.ilike(f"%{search_text}%"),
+            LWSectionTopic.F_TOPICID.in_(topic_ids)  # Filter by topic_ids
         ).limit(limit).all()
+
+        return laws
     finally:
         db.close()
 

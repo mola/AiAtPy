@@ -43,15 +43,24 @@ def get_law():
     else:
         print(f"HTTP status: {response.status_code}")
 
+
 def search_laws():
     global session
     search_text = input("Enter search text: ")
     limit = input("Enter limit (default 10): ") or "10"
+    # topic_ids_input = input("Enter topic IDs as a comma-separated list: ")
+    # topic_ids = [int(id.strip()) for id in topic_ids_input.split(",")]
+    topic_ids = [1,2]
+    # Make a POST request to search laws
+    payload = {
+        "q": search_text,
+        "limit": limit,
+        "topic_ids": topic_ids
+    }
 
-    # Make a GET request to search laws
-    response = session.get(
+    response = session.post(
         f"{API_URL}/laws/search",
-        params={"q": search_text, "limit": limit}
+        json=payload  # Send the data as JSON in the body
     )
 
     if response.status_code == 200:
@@ -65,7 +74,6 @@ def search_laws():
             print("-" * 30)
     else:
         print(f"Error: {response.status_code} - {response.text}")
-
 
 def get_law_section():
     global session

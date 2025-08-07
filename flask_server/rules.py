@@ -55,39 +55,50 @@ def get_law(law_id):
         logger.error(f"Error getting law {law_id}: {str(e)}")
         raise
 
-@rbp.route('/laws/search', methods=['GET'])
+@rbp.route('/laws/search', methods=['POST'])
 @jwt_required()
 def search_laws():
     """
-    Search laws by text content
+    Search laws by text content and filter by topic IDs
     ---
     tags:
       - Laws
     parameters:
       - name: q
-        in: query
+        in: body
         type: string
         required: true
         description: Search query text
       - name: limit
-        in: query
+        in: body
         type: integer
         required: false
         default: 10
         description: Maximum number of results to return
+      - name: topic_ids
+        in: body
+        type: array
+        items:
+          type: integer
+        required: true
+        description: List of topic IDs to filter the laws by
     responses:
       200:
         description: List of matching laws
       400:
-        description: Missing search query
+        description: Missing search query or topic IDs
     """
     try:
-        search_text = request.args.get('q')
+        data = request.get_json()
+        print("data",data)
+        search_text = data.get('q')
+        topic_ids = data.get('topic_ids')
+
         if not search_text:
             raise BadRequest("Search query parameter 'q' is required")
-
-        limit = int(request.args.get('limit', 10))
-        laws = search_laws_by_text(search_text, limit)
+        
+        limit = data.get('limit', 10)
+        laws = search_laws_by_text(search_text, topic_ids, limit)
 
         return jsonify([{
             "id": law.ID,
@@ -275,7 +286,7 @@ def build_topic_tree(topic_id, db_r):
 
     return topic_data
 
-@bp.route('/topics', methods=['GET'])
+@rbp.route('/topics', methods=['GET'])
 @jwt_required()
 def get_topics():
     """Endpoint to get the topic tree."""
