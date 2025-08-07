@@ -249,53 +249,97 @@ def handle_exception(e):
     logger.exception("An unexpected error occurred")
     return jsonify({"error": "Internal server error"}), 500
 
-@rbp.route('/topics', methods=['GET'])
+def build_topic_tree(topic_id, db_r):
+    """Recursive function to build a topic tree with the session passed."""
+    # Get topic by ID
+    topic = db_r.query(LWTopic).filter(LWTopic.ID == topic_id).first()
+
+    if not topic:
+        return None  # Return None if the topic doesn't exist
+
+    # Create a dictionary for the current topic with just ID and CAPTION
+    topic_data = {
+        'ID': int(topic.ID),
+        'CAPTION': topic.CAPTION,
+        'children': []
+    }
+
+    # Find the children of the current topic
+    children = db_r.query(LWTopic).filter(LWTopic.F_PARENTID == topic_id).all()
+
+    # Recursively build the tree for each child
+    for child in children:
+        child_tree = build_topic_tree(child.ID, db_r)
+        if child_tree:
+            topic_data['children'].append(child_tree)
+
+    return topic_data
+
+@bp.route('/topics', methods=['GET'])
 @jwt_required()
 def get_topics():
-    """
-    Get all topics or search by caption
-    ---
-    tags:
-      - Topics
-    parameters:
-      - name: q
-        in: query
-        type: string
-        required: false
-        description: Search query for topic caption
-      - name: limit
-        in: query
-        type: integer
-        required: false
-        default: 100
-        description: Maximum number of results to return
-    responses:
-      200:
-        description: List of topics
-    """
-    try:
-        search_text = request.args.get('q')
-        limit = int(request.args.get('limit', 100))
+    """Endpoint to get the topic tree."""
+    # Use the session in a context manager to ensure it's closed automatically after the request
+    with RulesSessionLocal() as db_r:
+        # Query all topics that are top-level (no parent)
+        top_level_topics = db_r.query(LWTopic).filter(LWTopic.F_PARENTID == None).all()
 
-        # Query the database
-        query = LWTopic.query
+        # Build the tree for each top-level topic
+        topic_tree = []
+        for top_topic in top_level_topics:
+            tree = build_topic_tree(top_topic.ID, db_r)
+            if tree:
+                topic_tree.append(tree)
 
-        if search_text:
-            query = query.filter(LWTopic.CAPTION.ilike(f'%{search_text}%'))
+    return jsonify(topic_tree)
 
-        topics = query.limit(limit).all()
+# @rbp.route('/topics', methods=['GET'])
+# @jwt_required()
+# def get_topics():
+#     """
+#     Get all topics or search by caption
+#     ---
+#     tags:
+#       - Topics
+#     parameters:
+#       - name: q
+#         in: query
+#         type: string
+#         required: false
+#         description: Search query for topic caption
+#       - name: limit
+#         in: query
+#         type: integer
+#         required: false
+#         default: 100
+#         description: Maximum number of results to return
+#     responses:
+#       200:
+#         description: List of topics
+#     """
+#     try:
+#         search_text = request.args.get('q')
+#         limit = int(request.args.get('limit', 100))
 
-        return jsonify([{
-            "id": topic.ID,
-            "code": topic.CODE,
-            "caption": topic.CAPTION,
-            "parent_id": topic.F_PARENTID,
-            "hierarchy": topic.HIERARCHY
-        } for topic in topics])
+#         # Query the database
+#         query = LWTopic.query
 
-    except Exception as e:
-        logger.error(f"Error getting topics: {str(e)}")
-        raise
+#         if search_text:
+#             query = query.filter(LWTopic.CAPTION.ilike(f'%{search_text}%'))
+
+#         topics = query.limit(limit).all()
+
+#         return jsonify([{
+#             "id": topic.ID,
+#             "code": topic.CODE,
+#             "caption": topic.CAPTION,
+#             "parent_id": topic.F_PARENTID,
+#             "hierarchy": topic.HIERARCHY
+#         } for topic in topics])
+
+#     except Exception as e:
+#         logger.error(f"Error getting topics: {str(e)}")
+#         raise
 
 @rbp.route('/topics/<int:topic_id>', methods=['GET'])
 @jwt_required()

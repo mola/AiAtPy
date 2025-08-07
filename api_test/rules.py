@@ -124,6 +124,21 @@ def get_section():
         print("-" * 30)
     else:
         print(f"Error: {response.status_code} - {response.text}")
+
+# Function to get the topics
+def get_topics():
+    global session
+
+    # Make a GET request to get the topics tree
+    response = session.get(f"{API_URL}/topics")
+
+    if response.status_code == 200:
+        topic_tree = response.json()
+        print("\nTopic Tree:")
+        print(topic_tree)  # You can format this as needed for better readability
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+
 # Main script
 if __name__ == "__main__":
     if authenticate_user():
@@ -134,7 +149,8 @@ if __name__ == "__main__":
             print("3. Law Section")
             print("4. Law Section No.")
             print("5. Section")
-            print("6. Exit")
+            print("6. Get Topics Tree")
+            print("7. Exit")
             choice = input("Choose an option: ")
 
             if choice == "1":
@@ -148,6 +164,8 @@ if __name__ == "__main__":
             elif choice == "5":
                 get_section()
             elif choice == "6":
+                get_topics()  # This will call the new function to get topics
+            elif choice == "7":
                 print("Exiting...")
                 break
             else:
