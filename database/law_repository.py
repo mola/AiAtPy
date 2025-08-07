@@ -20,23 +20,30 @@ def get_lwlaw_by_id(law_id: int) -> Optional[LWLaw]:
 def search_laws_by_text(search_text: str, topic_ids: list, limit: int = 10) -> List[LWLaw]:
     """
     Search laws using full-text search on section content
-    Returns laws that have sections matching the search text and belong to the given topic IDs
+    Returns laws that have sections matching the search text and optionally belong to the given topic IDs
     """
     db = RulesSessionLocal()
     try:
-        # Join LWLaw with LWSection and LWSectionTopic to filter by topic
-        laws = db.query(LWLaw).join(
+        # Start the query with joining LWLaw and LWSection
+        query = db.query(LWLaw).join(
             LWSection, LWSection.F_LWLAWID == LWLaw.ID
         ).join(
             LWSectionTopic, LWSectionTopic.F_SECTIONID == LWSection.ID
         ).filter(
-            LWLaw.CAPTION.ilike(f"%{search_text}%"),
-            LWSectionTopic.F_TOPICID.in_(topic_ids)  # Filter by topic_ids
-        ).limit(limit).all()
+            LWLaw.CAPTION.ilike(f"%{search_text}%")
+        )
+
+        # Apply topic filter only if topic_ids is not empty
+        if topic_ids:
+            query = query.filter(LWSectionTopic.F_TOPICID.in_(topic_ids))
+
+        # Limit the results as specified
+        laws = query.limit(limit).all()
 
         return laws
     finally:
         db.close()
+
 
 def get_law_with_sections(law_id: int) -> dict:
     """
