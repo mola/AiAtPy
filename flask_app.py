@@ -1,7 +1,7 @@
 import os
 import shutil
 import time
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from aiatconfig import AiAtConfig
 
@@ -34,6 +34,35 @@ def create_flask_app(settings):
     # Register Flask Blueprints
     app.register_blueprint(api_routes.bp)
     app.register_blueprint(rbp)
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve(path):
+        """
+        Serve the frontend's static files. If the requested path doesn't exist,
+        serve the index.html for client-side routing.
+
+        :param path: The path of the requested file.
+        :return: The requested file or index.html.
+        """
+        print(path)
+        # Check if the requested path is a static file (e.g., CSS, JS, images)
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+
+        # Serve index.html for all other routes (client-side routing)
+        return send_from_directory(app.static_folder, "index.html")
+
+    # -------------------------------
+    # Handle 404 Errors
+    # -------------------------------
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        """
+        Handle 404 errors by serving index.html.
+        This allows the frontend's client-side router to handle the routing.
+        """
+        return send_from_directory(app.static_folder, "index.html"), 200
 
     return app
 
