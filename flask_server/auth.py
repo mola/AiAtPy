@@ -16,7 +16,7 @@ def configure_jwt(app):
     app.config['JWT_REFRESH_COOKIE_NAME'] = 'refresh_token_cookie'
     app.config['JWT_COOKIE_SECURE'] = False
     app.config['JWT_COOKIE_CSRF_PROTECT'] = False
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 3600
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 13600
     app.config['JWT_COOKIE_SAMESITE'] = 'Lax'
     app.config['JWT_ACCESS_COOKIE_PATH'] = '/api/'
     app.config['JWT_REFRESH_COOKIE_PATH'] = '/api/token/refresh'

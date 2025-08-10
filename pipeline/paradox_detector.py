@@ -12,11 +12,14 @@ class ParadoxDetector(QObject):
 
     def __init__(self, app_manager):
         super().__init__()
+        self.sections = []
         self.app_manager = app_manager
         self.thread_pool = QThreadPool.globalInstance()
         # Set max threads (e.g., 4-8 depending on system capabilities)
-        self.thread_pool.setMaxThreadCount(4)
+        self.thread_pool.setMaxThreadCount(32)
         self.active_tasks: Dict[int, Dict] = {}
+        self.current_section_index = 0
+        self.task_data = None
 
     def initialize(self):
         # Initialize any resources needed
@@ -31,59 +34,74 @@ class ParadoxDetector(QObject):
                 print(f"Task {task_id} not found")
                 return
             
-            task_data = task.data
+            self.task_data  = task.data
             
             # Update task status
             update_task_status(db, task_id, "processing")
             
-            if task_data.get('compare_all', False):
+            if self.task_data.get('compare_all', False):
                 # TODO: Implement logic for comparing to all laws
                 print("Comparing to all laws - implementation pending")
                 update_task_status(db, task_id, "completed", "All laws comparison not yet implemented")
+                self.sections = db_r.query(LWSection).filter(
+                    LWSection.FULLPATH.ilike(f"%ماده%")
+                ).all()
+
             else:
                 # Case for comparing to one specific law
-                law_id = task_data.get('check_law_id')
+                law_id = self.task_data.get('check_law_id')
                 if not law_id:
                     raise ValueError("No law_id specified for comparison")
                 
                 # Get all sections from the check_law_id
-                sections = db_r.query(LWSection).filter(
+                self.sections = db_r.query(LWSection).filter(
                     LWSection.F_LWLAWID == law_id
                 ).all()
 
-                if not sections:
+                if not self.sections:
                     raise ValueError(f"No sections found for law {law_id}")
 
-                # Initialize tracking for this task
-                self.active_tasks[task_id] = {
-                    'total': len(sections),
-                    'completed': 0
-                }
-
-                # Create comparison tasks
-                for section in sections:
-                    comparison_task = ComparisonTask(
-                        task_id=task_id,
-                        new_law_text=task_data.get('prompt', ''),
-                        existing_law_text=section.SECTIONTEXT,
-                        detector=self,  # Pass reference to detector
-                        section_data={
-                            'first_law_id': law_id,
-                            'first_section_id': int(section.ID),
-                            'second_law_id': None,
-                            'second_section_id': None
-                        }
-                    )
-                    self.thread_pool.start(comparison_task)
-                
-                # update_task_status(db, task_id, "completed", f"Comparison tasks created for {len(sections)} sections")
-                
+            # Initialize tracking for this task
+            self.active_tasks[task_id] = {
+                'total': len(self.sections),
+                'completed': 0,
+                'processed': 0
+            }
+            self.start_task_batch(task_id, batch_size=1000)
+           
         except Exception as e:
             print(f"Error processing task {task_id}: {str(e)}")
             update_task_status(db, task_id, "failed", str(e))
         finally:
             db.close()
             db_r.close()
+
+    def start_task_batch(self, task_id, batch_size=1000):
+        """Start a batch of tasks from current position in sections"""
+        batch = []
+        remaining = len(self.sections) - self.current_section_index
+        current_batch_size = min(batch_size, remaining)
+        
+        for i in range(current_batch_size):
+            section = self.sections[self.current_section_index]
+            comparison_task = ComparisonTask(
+                task_id=task_id,
+                new_law_text=self.task_data.get('prompt', ''),
+                existing_law_text=section.SECTIONTEXT,
+                detector=self,
+                section_data={
+                    'first_law_id': int(section.F_LWLAWID),
+                    'first_section_id': int(section.ID),
+                    'second_law_id': None,
+                    'second_section_id': None
+                }
+            )
+            batch.append(comparison_task)
+            self.current_section_index += 1
+        
+        # Start all tasks in batch
+        for t in batch:
+            self.thread_pool.start(t)
 
     def cleanup(self):
         # Wait for all threads to finish
@@ -97,7 +115,6 @@ class ParadoxDetector(QObject):
         # Store the result in the database immediately
         db = MainSessionLocal()
         try:
-            # Create new ComparisonResult record
             comparison_result = ComparisonResult(
                 task_id=task_id,
                 first_law_id=result['first_law_id'],
@@ -112,19 +129,24 @@ class ParadoxDetector(QObject):
             
             # Track completion
             self.active_tasks[task_id]['completed'] += 1
-
+            self.active_tasks[task_id]['processed'] += 1
+            
+            # Check if we need to start a new batch
+            if (self.active_tasks[task_id]['processed'] < 
+                self.active_tasks[task_id]['total'] and
+                self.active_tasks[task_id]['completed'] < 1000):
+                
+                # Start another task from the remaining sections
+                self.start_task_batch(task_id, batch_size=1)
+            
             # Check if all tasks are complete
             if (self.active_tasks[task_id]['completed'] >= 
                 self.active_tasks[task_id]['total']):
                 
-                # All tasks complete, emit signal
                 self.all_comparisons_complete.emit(task_id, [])
-                
-                # Update main task status (no results in JSON anymore)
                 update_task_status(db, task_id, "completed")
-                
-                # Clean up
                 del self.active_tasks[task_id]
+                
         except Exception as e:
             db.rollback()
             print(f"Error storing comparison result: {str(e)}")

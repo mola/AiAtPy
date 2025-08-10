@@ -11,9 +11,12 @@ from .auth import authenticate_user
 import uuid,logging,json
 from datetime import datetime
 from sqlalchemy import func 
+from utilities.persian_embedding import PersianEmbeddingSearch
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('api', __name__, url_prefix='/api')
+
+embedding_search = PersianEmbeddingSearch()
 
 @bp.route('/login', methods=['POST'])
 def login():
@@ -78,6 +81,31 @@ def protected():
     return jsonify(logged_in_as=current_user), 200
 
 
+@bp.route('/search_similar', methods=['POST'])
+@jwt_required()
+def search_similar():
+    data = request.get_json()
+    user_id = get_jwt_identity()
+    query_text = data.get('query_text')
+    k = data.get('k', 20)  # Default to 20 if not specified
+    
+    if not query_text:
+        return jsonify({"error": "query_text is required"}), 400
+        
+    try:
+        distances, indices = embedding_search.find_similar(query_text, k)
+        return jsonify({
+            "status": "success",
+            "distances": distances.tolist(),  # Convert numpy array to list
+            "indices": indices.tolist()
+        }), 200
+    except Exception as e:
+        logger.exception("Error in similarity search")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+        
 @bp.route('/analyze', methods=['POST'])
 @jwt_required()
 def analyze_law():
@@ -124,6 +152,27 @@ def analyze_law():
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
+
+@bp.route('/chat', methods=['POST'])
+@jwt_required()
+def chat():
+    data = request.get_json()
+    user_id = get_jwt_identity()
+    msg = data.get('msg')
+    
+    if not msg:
+        return jsonify({"error": "Message is required"}), 400
+        
+    response = current_app.app_manager.chat(msg)
+    return jsonify(response), 200 if response['status'] == 'success' else 500
+
+@bp.route('/chat_reset', methods=['POST'])
+@jwt_required()
+def chat_reset():
+    user_id = get_jwt_identity()
+    response = current_app.app_manager.chat_reset()
+    return jsonify(response), 200 if response['status'] == 'success' else 500
+
 
 @bp.route('/analyze_rules', methods=['POST'])
 @jwt_required()
