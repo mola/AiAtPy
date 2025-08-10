@@ -82,13 +82,13 @@ class ParadoxDetector(QObject):
         remaining = len(self.sections) - self.current_section_index
         current_batch_size = min(batch_size, remaining)
         
+        prompt=self.task_data.get('prompt', '')
         for i in range(current_batch_size):
             section = self.sections[self.current_section_index]
             comparison_task = ComparisonTask(
                 task_id=task_id,
-                new_law_text=self.task_data.get('prompt', ''),
+                new_law_text=prompt,
                 existing_law_text=section.SECTIONTEXT,
-                detector=self,
                 section_data={
                     'first_law_id': int(section.F_LWLAWID),
                     'first_section_id': int(section.ID),
@@ -96,6 +96,7 @@ class ParadoxDetector(QObject):
                     'second_section_id': None
                 }
             )
+            comparison_task.comparisonComplete.connect(self.handle_comparison_complete)
             batch.append(comparison_task)
             self.current_section_index += 1
         
@@ -110,6 +111,7 @@ class ParadoxDetector(QObject):
     def handle_comparison_complete(self, task_id: int, result: dict):
         """Called when a single comparison task completes"""
         if task_id not in self.active_tasks:
+            print("Not Finished but return ")
             return
 
         # Store the result in the database immediately
