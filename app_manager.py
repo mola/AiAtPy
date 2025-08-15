@@ -7,13 +7,13 @@ from pipeline.paradox2_detector import Paradox2Detector
 from llm_connectors.deepseek_chat import DeepSeekChat
 
 class AppManager(QObject):
-    def __init__(self, settings):
+    def __init__(self, settings,searcher):
         super().__init__()
         self.bridge = Bridge()
         self.settings = settings
         self.flask_thread = None
         self.flask_app = None
-        self.paradox_detector = ParadoxDetector(self)
+        self.paradox_detector = ParadoxDetector(self,searcher)
         self.paradox2_detector = Paradox2Detector(self)
         self.bridge.new_analysis_task.connect(self.handle_new_task)
         self.dummy_timer = None

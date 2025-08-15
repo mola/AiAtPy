@@ -1,4 +1,6 @@
 # main.py
+
+from embedding_search import create_embedding_search_instance
 import os
 import sys
 import signal
@@ -103,7 +105,8 @@ if __name__ == "__main__":
     init_db()
     
     qt_app = QCoreApplication([])
-    app_manager = AppManager(settings)
+    searcher = create_embedding_search_instance()
+    app_manager = AppManager(settings,searcher)
     app_manager.initialize()
 
 
