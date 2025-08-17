@@ -209,6 +209,8 @@ __marimo__/
 db
 resources
 conf
+frontend
 
 *.pyproject.user
 *.db
+
