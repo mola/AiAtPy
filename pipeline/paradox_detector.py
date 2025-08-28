@@ -157,12 +157,12 @@ class ParadoxDetector(QObject):
                 self.start_task_batch(task_id, batch_size=1)
             
             # Check if all tasks are complete
-            if (self.active_tasks[task_id]['completed'] >= 
-                self.active_tasks[task_id]['total']):
+            if (self.active_tasks[task_id]['completed'] >= self.active_tasks[task_id]['total']):
                 
                 self.all_comparisons_complete.emit(task_id, [])
                 update_task_status(db, task_id, "completed")
                 del self.active_tasks[task_id]
+                self.current_section_index = 0
                 
         except Exception as e:
             db.rollback()
