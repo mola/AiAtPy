@@ -246,6 +246,9 @@ def get_task_status(task_id):
         if not task:
             return jsonify({"error": "Task not found"}), 404
         
+        # Retrieve section_ids from task data
+        section_ids = task.data.get('section_ids', [])
+
         # Query comparison results with optional timestamp and contradiction filter
         results_query = db.query(ComparisonResult).filter(
             ComparisonResult.task_id == task_id
@@ -302,11 +305,14 @@ def get_task_status(task_id):
             # Extract why from response JSON (no parsing needed now)
             why_value = result.response.get('why', '') if result.response else ''
             
+            first_section_id = int(result.first_section_id)
+
+            # print(f"First Section ID: {result.first_section_id}, Type: {type(result.first_section_id)}")
             results_data.append({
                 'id': result.id,
                 'first_law_id': result.first_law_id,
                 'first_law_caption': first_law_caption,
-                'first_section_id': result.first_section_id,
+                'first_section_id': first_section_id,
                 'first_section_caption': first_section_caption,
                 'second_law_id': result.second_law_id,
                 'second_law_caption': second_law_caption,
@@ -317,6 +323,13 @@ def get_task_status(task_id):
                 'finish_time': result.finish_time
             })
         
+        section_id_to_index = {int(section_id): index for index, section_id in enumerate(section_ids)}
+
+        sorted_results_data = sorted(
+            results_data, 
+            key=lambda x: section_id_to_index.get(int(x['first_section_id']), float('inf'))
+        )
+
         # Get the latest timestamp for client-side tracking
         latest_timestamp = max(
             [r.finish_time for r in comparison_results] or [0]
@@ -326,7 +339,7 @@ def get_task_status(task_id):
             "task_id": task.id,
             "status": task.status,
             "created_at": task.created_at,
-            "results": results_data,
+            "results": sorted_results_data,
             "latest_timestamp": latest_timestamp
         })
     finally:
