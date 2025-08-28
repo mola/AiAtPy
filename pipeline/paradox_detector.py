@@ -6,6 +6,7 @@ from .comparison_task import ComparisonTask
 from database.models_rules import LWSection
 from typing import Dict, List
 import json
+import time
 
 class ParadoxDetector(QObject):
     all_comparisons_complete = Signal(int, list)  # task_id, results
@@ -44,8 +45,10 @@ class ParadoxDetector(QObject):
                 # TODO: Implement logic for comparing to all laws
                 print("Comparing to all laws - implementation pending")
                 prompt = self.task_data.get('prompt')
-                print("prompt" , prompt)
+                search_start = time.time()
                 section_ids = self.searcher.get_section_ids(prompt)
+                search_end = time.time()
+                print(f"---- search time : {search_end - search_start} -----")
                 print("ids:" , section_ids)
                 # Fetch the corresponding ORM models (LWSection instances)
                 self.sections = db_r.query(LWSection).filter(LWSection.ID.in_(section_ids)).all()

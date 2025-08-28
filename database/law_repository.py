@@ -45,6 +45,44 @@ def search_laws_by_text(search_text: str, topic_ids: list, limit: int = 10) -> L
         db.close()
 
 
+from collections import OrderedDict
+
+def search_laws_by_section_ids(section_ids: List[int]) -> List[LWLaw]:
+    """
+    Get laws corresponding to the given section IDs, ensuring the order and returning only
+    the first 10 unique law rows.
+    
+    Args:
+        section_ids: A list of section IDs to get corresponding laws.
+
+    Returns:
+        A list of LWLaw objects corresponding to the section IDs, up to 10 unique laws.
+    """
+    db = RulesSessionLocal()
+    try:        
+        # Fetch the sections corresponding to the given section IDs
+        sections = db.query(LWSection).filter(LWSection.ID.in_(section_ids)).all()
+
+        # Sort the sections based on the order of the input section_ids
+        sections_sorted = sorted(sections, key=lambda x: section_ids.index(x.ID))
+
+        # Create a dictionary to filter out duplicate laws while preserving order
+        unique_laws = OrderedDict()
+        for section in sections_sorted:
+            law_id = section.F_LWLAWID
+            # Fetch the law corresponding to the section's F_LWLAWID
+            law = db.query(LWLaw).filter(LWLaw.ID == law_id).first()
+            if law and law_id not in unique_laws:
+                unique_laws[law_id] = law
+
+        # Get the first 10 unique laws
+        result_laws = list(unique_laws.values())[:10]
+
+        return result_laws
+    finally:
+        db.close()
+
+
 def get_law_with_sections(law_id: int) -> dict:
     """
     Get a law with all its sections and full-text search highlights

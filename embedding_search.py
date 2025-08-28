@@ -6,11 +6,13 @@ import pickle
 from transformers import AutoModel
 from transformers import AutoTokenizer
 import torch
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class EmbeddingSearch:
     def __init__(self):
         self.d = 1024
-        self.k = 200
+        self.k = 10
         self.index_method = 'IndexFlatL2'
         self.embedding_model = 'heydariAI/persian-embeddings'
         self.faiss_index_file = "/home/arisa/diar/checkpoints/faiss_index_heydariAI_IndexFlatL2_checkpoint_1037000.idx"
@@ -44,16 +46,13 @@ class EmbeddingSearch:
             with torch.no_grad():
                 print("prompt: " , new_section)
                 inputs = self.tokenizer([new_section], return_tensors="pt", padding=True, truncation=True).to(self.device)
-                print("inputs: " ,inputs)
                 outputs = self.model(**inputs)
                 new_section_embedding = self.mean_pooling(outputs, inputs['attention_mask']).detach().cpu().numpy()
-                print("new_section_embedding" , new_section_embedding[:100])
                 print("shape" , new_section_embedding.shape)
 
             D, I = self.index.search(new_section_embedding, self.k)
 
             print("i" , I)
-            print("dic ", len(self.faiss_to_section_map))
             mapped_sections = []
             for idx in I[0]:
                 if idx != -1:
