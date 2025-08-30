@@ -1,18 +1,17 @@
 import threading
 from PySide6.QtCore import QObject, Slot, QTimer
-from flask_app import create_flask_app, start_flask
 from bridge import Bridge
 from pipeline.paradox_detector import ParadoxDetector
 from pipeline.paradox2_detector import Paradox2Detector
 from llm_connectors.deepseek_chat import DeepSeekChat
+from fastapi_app import create_fastapi_app  # Import the function
 
 class AppManager(QObject):
     def __init__(self, settings):
         super().__init__()
         self.bridge = Bridge()
         self.settings = settings
-        self.flask_thread = None
-        self.flask_app = None
+        self.fastapi_app = None
         self.paradox_detector = ParadoxDetector(self)
         self.paradox2_detector = Paradox2Detector(self)
         self.bridge.new_analysis_task.connect(self.handle_new_task)
@@ -21,7 +20,7 @@ class AppManager(QObject):
 
     def initialize(self):
         self.setup_dummy_timer()
-        self.setup_flask()
+        self.setup_fastapi()
         # Initialize other components
         self.paradox_detector.initialize()
 
@@ -30,20 +29,23 @@ class AppManager(QObject):
         self.dummy_timer.start(1000)  # fire every 1000ms
         self.dummy_timer.timeout.connect(lambda: None)
 
-
-    def setup_flask(self):
-        self.flask_app = create_flask_app(self.settings)
-        self.flask_app.app_manager = self  # Make AppManager accessible to Flask
-        self.flask_app.bridge = self.bridge
+    def setup_fastapi(self):
+        self.fastapi_app = create_fastapi_app(self.settings)
+        self.fastapi_app.state.app_manager = self  # Make AppManager accessible to FastAPI
         
-
-        # Configure JWT
-        from flask_server.auth import configure_jwt
-        configure_jwt(self.flask_app)
-        
-        self.flask_thread = threading.Thread(target=start_flask, args=(self.flask_app,), daemon=True)
-        self.flask_thread.start()
-        print("Flask server started in a separate thread.")
+        # Start FastAPI in a separate thread
+        import uvicorn
+        self.fastapi_thread = threading.Thread(
+            target=lambda: uvicorn.run(
+                self.fastapi_app,
+                host="0.0.0.0",
+                port=8000,
+                log_level="info"
+            ),
+            daemon=True
+        )
+        self.fastapi_thread.start()
+        print("FastAPI server started in a separate thread.")
 
     def add_analysis_task(self, task_id):
         """Add a new analysis task to be processed"""

@@ -26,6 +26,7 @@ class AuthClient:
         if response.status_code == 200:
             print("Login successful!")
             print("Received cookies:", self.session.cookies.get_dict())
+            # The token is now stored in cookies, so the session will automatically send it
             return True
         print(f"Login failed: {response.status_code} - {response.text}")
         return False
@@ -35,9 +36,18 @@ class AuthClient:
 
         if response.status_code == 200:
             print("Protected test successful!")
-            print("Response:", response.json())
+            print("Status:", response.status_code)
+            print("Response JSON:", response.json())
             return True
         print(f"Test failed: {response.status_code} - {response.text}")
+        return False
+
+    def logout(self):
+        response = self.session.post(f"{self.base_url}/logout")
+        if response.status_code == 200:
+            print("Logout successful!")
+            return True
+        print(f"Logout failed: {response.status_code} - {response.text}")
         return False
 
 if __name__ == "__main__":
@@ -46,12 +56,16 @@ if __name__ == "__main__":
     if client.login():
         while True:
             print("\nMenu:")
-            print("1. Test")
+            print("1. Test protected endpoint")
+            print("2. Logout")
             print("6. Exit")
             choice = input("Choose an option: ")
 
             if choice == "1":
                 client.test_protected()
+            elif choice == "2":
+                client.logout()
+                break
             elif choice == "6":
                 print("Exiting...")
                 break

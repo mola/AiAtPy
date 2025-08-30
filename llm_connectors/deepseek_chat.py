@@ -11,7 +11,7 @@ class DeepSeekChat(BaseConnector):
         self.system_prompt = "You are a helpful AI assistant."
         self.conversation_history = []
         api_key = AiAtConfig.get_deepseek_api_key()
-        self.client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        self.client = OpenAI(api_key=api_key, base_url="http://alphapi.datall.ir/v1")
 
     def setSystemPrompt(self, text):
         self.system_prompt = text
@@ -23,7 +23,7 @@ class DeepSeekChat(BaseConnector):
         messages.append({"role": "user", "content": message})
         
         response = self.client.chat.completions.create(
-            model="deepseek-chat",
+            model="DeepSeek-V3",
             messages=messages,
             stream=False,
             temperature=0.3
