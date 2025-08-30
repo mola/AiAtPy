@@ -1,10 +1,11 @@
-from flask import jsonify, request, Blueprint
+from flask import jsonify, request, Blueprint, current_app
 from database.law_repository import (
     get_lwlaw_by_id,
     search_laws_by_text,
     get_law_with_sections,
     search_laws_with_sections,
-    search_section_by_id
+    search_section_by_id,
+    search_laws_by_section_ids
 )
 from flask_jwt_extended import (
     jwt_required
@@ -98,7 +99,12 @@ def search_laws():
             raise BadRequest("Search query parameter 'q' is required")
         
         limit = data.get('limit', 10)
-        laws = search_laws_by_text(search_text, topic_ids, limit)
+        print("search query: " , search_text)
+        section_search_results = current_app.app_manager.get_sections_search_results(search_text)
+        print("search results : ", section_search_results)
+        # laws = search_laws_by_text(search_text, topic_ids, limit)
+        laws = search_laws_by_section_ids(section_search_results)
+        print("search laws response: " , [law.ID for law in laws])
 
         return jsonify([{
             "id": law.ID,

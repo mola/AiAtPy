@@ -29,6 +29,8 @@ class ComparisonTask(QObject,QRunnable):
             # prompt = self._format_comparison_prompt()
             
             # Get LLM response
+            # print("processing: " , self.new_law_text , self.existing_law_text[:100])
+            print("llm process hit")
             response = self.llm_connector.send_message(self.new_law_text, self.existing_law_text)
 
             # import random

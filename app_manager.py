@@ -7,16 +7,17 @@ from llm_connectors.deepseek_chat import DeepSeekChat
 from fastapi_app import create_fastapi_app  # Import the function
 
 class AppManager(QObject):
-    def __init__(self, settings):
+    def __init__(self, settings,searcher):
         super().__init__()
         self.bridge = Bridge()
         self.settings = settings
         self.fastapi_app = None
-        self.paradox_detector = ParadoxDetector(self)
+        self.paradox_detector = ParadoxDetector(self,searcher)
         self.paradox2_detector = Paradox2Detector(self)
         self.bridge.new_analysis_task.connect(self.handle_new_task)
         self.dummy_timer = None
         self.deepseek_chat = DeepSeekChat()
+        self.searcher = searcher
 
     def initialize(self):
         self.setup_dummy_timer()
@@ -95,3 +96,7 @@ class AppManager(QObject):
     def cleanup(self):
         # Cleanup resources
         self.paradox_detector.cleanup()
+
+    def get_sections_search_results(self, query):
+        section_ids = self.searcher.get_section_ids(query)
+        return section_ids

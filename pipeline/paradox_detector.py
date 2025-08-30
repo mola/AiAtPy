@@ -6,11 +6,12 @@ from .comparison_task import ComparisonTask
 from database.models_rules import LWSection
 from typing import Dict, List
 import json
+import time
 
 class ParadoxDetector(QObject):
     all_comparisons_complete = Signal(int, list)  # task_id, results
 
-    def __init__(self, app_manager):
+    def __init__(self, app_manager,searcher):
         super().__init__()
         self.sections = []
         self.app_manager = app_manager
@@ -20,6 +21,7 @@ class ParadoxDetector(QObject):
         self.active_tasks: Dict[int, Dict] = {}
         self.current_section_index = 0
         self.task_data = None
+        self.searcher = searcher
 
     def initialize(self):
         # Initialize any resources needed
@@ -42,10 +44,23 @@ class ParadoxDetector(QObject):
             if self.task_data.get('compare_all', False):
                 # TODO: Implement logic for comparing to all laws
                 print("Comparing to all laws - implementation pending")
-                update_task_status(db, task_id, "completed", "All laws comparison not yet implemented")
-                self.sections = db_r.query(LWSection).filter(
-                    LWSection.FULLPATH.ilike(f"%ماده%")
-                ).all()
+                prompt = self.task_data.get('prompt')
+                search_start = time.time()
+                section_ids = self.searcher.get_section_ids(prompt)
+                search_end = time.time()
+                print(f"---- search time : {search_end - search_start} -----")
+                print("ids:" , section_ids)
+                # Fetch the corresponding ORM models (LWSection instances)
+                self.sections = db_r.query(LWSection).filter(LWSection.ID.in_(section_ids)).all()
+                if not self.sections:
+                    raise ValueError("No corresponding sections found for comparison.")
+
+                print(f"Retrieved sections: {len(self.sections)}")
+
+                # update_task_status(db, task_id, "completed", "All laws comparison not yet implemented")
+                # self.sections = db_r.query(LWSection).filter(
+                #     LWSection.FULLPATH.ilike(f"%ماده%")
+                # ).all()
 
             else:
                 # Case for comparing to one specific law
@@ -142,12 +157,12 @@ class ParadoxDetector(QObject):
                 self.start_task_batch(task_id, batch_size=1)
             
             # Check if all tasks are complete
-            if (self.active_tasks[task_id]['completed'] >= 
-                self.active_tasks[task_id]['total']):
+            if (self.active_tasks[task_id]['completed'] >= self.active_tasks[task_id]['total']):
                 
                 self.all_comparisons_complete.emit(task_id, [])
                 update_task_status(db, task_id, "completed")
                 del self.active_tasks[task_id]
+                self.current_section_index = 0
                 
         except Exception as e:
             db.rollback()
