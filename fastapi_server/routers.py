@@ -4,7 +4,7 @@ from typing import Optional, List
 import logging
 import json
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, delete
 from pydantic import BaseModel
 
 from database.session import MainSessionLocal, RulesSessionLocal
@@ -380,3 +380,47 @@ async def get_tasks(current_user: User = Depends(get_current_user)):
     finally:
         db.close()
         db_r.close()
+
+@router.delete("/task/{task_id}")
+async def delete_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a task and all its comparison results
+    """
+    db = MainSessionLocal()
+    
+    try:
+        # First verify the task exists and belongs to the current user
+        task = db.query(AnalysisTask).filter(
+            AnalysisTask.id == task_id,
+            AnalysisTask.user_id == current_user.id
+        ).first()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        # Delete all comparison results for this task
+        delete_comparison_stmt = delete(ComparisonResult).where(
+            ComparisonResult.task_id == task_id
+        )
+        db.execute(delete_comparison_stmt)
+        
+        # Delete the task itself
+        db.delete(task)
+        
+        # Commit the transaction
+        db.commit()
+        
+        return {
+            "message": "Task and all related comparison results deleted successfully",
+            "task_id": task_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Error deleting task {task_id}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
+    finally:
+        db.close()

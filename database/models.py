@@ -1,6 +1,8 @@
 import time
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON,Boolean
+from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON, Boolean
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 from database.session import MainBase
 
 class User(MainBase):
@@ -38,11 +40,14 @@ class ComparisonResult(MainBase):
     __tablename__ = 'comparison_results'
     
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, nullable=False, index=True)
+    task_id = Column(Integer, ForeignKey('analysis_tasks.id', ondelete='CASCADE'), nullable=False, index=True)
     first_law_id = Column(Integer, nullable=False)
     first_section_id = Column(Integer, nullable=False)
     second_law_id = Column(Integer)
     second_section_id = Column(Integer)
     response = Column(JSON)
     contradiction = Column(Boolean)
-    finish_time = Column(BigInteger, default=lambda: int(time.time())) 
+    finish_time = Column(BigInteger, default=lambda: int(time.time()))
+    
+    # Optional: Add relationship
+    task = relationship("AnalysisTask", backref="comparison_results")
