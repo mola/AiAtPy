@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Depends, Request, status, Form, Body
+from fastapi import FastAPI, HTTPException, Depends, Request, status, Form, Body, Query, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,12 +8,17 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Optional, List, Union
 from database.session import MainSessionLocal
 from database.crud import get_user_by_username
-from fastapi_server.auth import auth_router
+from fastapi_server.auth import auth_router, get_current_user, oauth2_scheme
 from fastapi_server.rules import router as rules_router
 from fastapi_server.routers import router as tasks_router
+from fastapi_server.websocket_manager import manager
 from aiatconfig import AiAtConfig
 from database.models import User
+import logging
+import datetime
+import asyncio
 
+logger = logging.getLogger(__name__)
 
 def create_fastapi_app(settings):
     app = FastAPI(title="AIAT API", version="1.0.0")
@@ -36,6 +41,9 @@ def create_fastapi_app(settings):
     app.include_router(tasks_router)
 
 
+    # Store the WebSocket manager in app state for access from AppManager
+    app.state.websocket_manager = manager
+
     # Get static folder path
     static_folder = settings.value("flask/static_folder", "frontend")
     static_path = Path(static_folder)
@@ -44,21 +52,95 @@ def create_fastapi_app(settings):
     if static_path.exists() and static_path.is_dir():
         app.mount("/static", StaticFiles(directory=static_folder), name="static")
     
-    # # Serve frontend files
-    # @app.get("/{full_path:path}")
-    # async def serve_frontend(full_path: str):
-    #     # Check if the file exists in static folder
-    #     file_path = static_path / full_path
-    #     if file_path.exists() and file_path.is_file():
-    #         return FileResponse(file_path)
+    # Serve frontend files
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Check if the file exists in static folder
+        file_path = static_path / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
         
-    #     # Serve index.html for SPA routing
-    #     index_path = static_path / "index.html"
-    #     if index_path.exists():
-    #         return FileResponse(index_path)
+        # Serve index.html for SPA routing
+        index_path = static_path / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
         
-    #     raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="File not found")
 
+
+    @app.get("/sample-function")
+    async def sample_function():
+        # A simple example endpoint
+        return {
+            "status": "ok",
+            "time_utc": datetime.datetime.utcnow().isoformat() + "Z",
+            "note": "This is a sample HTTP endpoint"
+        }
+
+    # WebSocket endpoint
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
+        try:
+            # Verify token first
+            if not token:
+                await websocket.close(code=1008, reason="Token required")
+                return
+            
+            # Create a simple request-like object for auth
+            class WebSocketRequest:
+                def __init__(self, token):
+                    self.cookies = {"access_token": token}
+                    self.headers = {}
+            
+            # Use your existing auth function
+            user = await get_current_user(WebSocketRequest(token), token)
+            
+            if not user:
+                await websocket.close(code=1008, reason="Invalid token")
+                return
+                
+            user_id = user.id
+            
+            # Connect using manager (this handles accept() and connection tracking)
+            await manager.connect(websocket, user_id)
+            logger.info(f"User {user_id} connected via WebSocket")
+            
+            try:
+                while True:
+                    try:
+                        # Wait for message with timeout
+                        data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                        
+                        # Process the received data
+                        await websocket.send_json({"echo": data, "length": len(data)})
+                        
+                    except asyncio.TimeoutError:
+                        # Send ping to check connection health
+                        try:
+                            await websocket.send_json({"type": "ping"})
+                        except:
+                            break  # Connection failed
+                            
+            except WebSocketDisconnect:
+                logger.info(f"User {user_id} disconnected normally")
+            except Exception as e:
+                logger.error(f"WebSocket error for user {user_id}: {str(e)}")
+            finally:
+                # Use manager's disconnect method for proper cleanup
+                manager.disconnect(user_id)
+                
+        except HTTPException as auth_err:
+            logger.warning(f"WebSocket authentication failed: {str(auth_err)}")
+            try:
+                await websocket.close(code=1008, reason="Authentication failed")
+            except:
+                pass  # Already closed
+        except Exception as e:
+            logger.error(f"Unexpected error in WebSocket: {str(e)}")
+            try:
+                await websocket.close(code=1011, reason="Internal error")
+            except:
+                pass
 
     return app
 

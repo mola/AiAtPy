@@ -4,7 +4,10 @@ from bridge import Bridge
 from pipeline.paradox_detector import ParadoxDetector
 from pipeline.paradox2_detector import Paradox2Detector
 from llm_connectors.deepseek_chat import DeepSeekChat
-from fastapi_app import create_fastapi_app  # Import the function
+from fastapi_app import create_fastapi_app
+from fastapi_server.websocket_manager import manager
+import asyncio
+import datetime
 
 class AppManager(QObject):
     def __init__(self, settings,searcher):
@@ -34,6 +37,9 @@ class AppManager(QObject):
         self.fastapi_app = create_fastapi_app(self.settings)
         self.fastapi_app.state.app_manager = self  # Make AppManager accessible to FastAPI
         
+        # Import and store the WebSocket manager
+        self.fastapi_app.state.websocket_manager = manager
+
         # Start FastAPI in a separate thread
         import uvicorn
         self.fastapi_thread = threading.Thread(
@@ -77,6 +83,41 @@ class AppManager(QObject):
                 "status": "error",
                 "message": "Failed to process your message"
             }
+
+    async def send_custom_log_to_user_async(self, user_id: int, log_message: str) -> bool:
+        """Async version for use within async contexts"""
+        try:
+            if not hasattr(self.fastapi_app.state, 'websocket_manager'):
+                return False
+            
+            manager = self.fastapi_app.state.websocket_manager
+            
+            custom_message = {
+                "type": "log",
+                "message": log_message,
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+            }
+            
+            await manager.send_to_user(user_id, custom_message)
+            return True
+            
+        except Exception as e:
+            print(f"Error sending async log to user {user_id}: {str(e)}")
+            return False
+
+    def send_custom_log_to_user(self, user_id: int, log_message: str) -> bool:
+        """Synchronous wrapper for the async method"""
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.send_custom_log_to_user_async(user_id, log_message)
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            print(f"Error in sync wrapper: {str(e)}")
+            return False
 
     def chat_reset(self):
         """Reset the chat conversation history"""
