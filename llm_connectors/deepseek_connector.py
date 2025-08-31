@@ -19,7 +19,7 @@ class DeepSeekConnector(BaseConnector):
         
     def send_message(self, message1, message2):
         response = self.client.chat.completions.create(
-            model="DeepSeek-V3",
+            model="DeepSeek-V3.1",
             messages=[
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": message1},

@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api", tags=["laws","topics"])
 class LawResponse(BaseModel):
     id: int
     caption: str
-    law_no: str
+    law_no: int
     approve_date: Optional[str] = None
     content_text: Optional[str] = None
 

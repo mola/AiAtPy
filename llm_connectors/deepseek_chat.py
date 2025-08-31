@@ -23,7 +23,7 @@ class DeepSeekChat(BaseConnector):
         messages.append({"role": "user", "content": message})
         
         response = self.client.chat.completions.create(
-            model="DeepSeek-V3",
+            model="DeepSeek-V3.1",
             messages=messages,
             stream=False,
             temperature=0.3

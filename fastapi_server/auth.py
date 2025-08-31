@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import APIRouter, Depends, HTTPException, status, Form, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Form, Response, Request
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.security import OAuth2PasswordRequestForm
 from database.session import MainSessionLocal
@@ -222,8 +222,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), response: Resp
         value=access_token,
         httponly=True,
         max_age=4 * 60 * 60,
-        samesite="lax",
-        secure=False
+        samesite="none",
+        secure=True
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -252,9 +252,9 @@ async def login_with_json(login_request: LoginRequest, response: Response, reque
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=False,
+        httponly=True,
         max_age=4 * 60 * 60,
-        samesite="lax",
+        samesite="none",
         secure=True
     )
     
@@ -355,7 +355,7 @@ async def delete_all_user_sessions_admin(user_id: int, current_user: User = Depe
     return {"message": "All sessions deleted permanently"}
 
 @auth_router.post("/logout")
-async def logout(response: Response, current_user: User = Depends(get_current_user)):
+async def logout(response: Response, request: Request,current_user: User = Depends(get_current_user)):
     """Logout endpoint that clears the current session"""
     # Get session ID from token
     token = None

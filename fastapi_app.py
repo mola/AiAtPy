@@ -35,7 +35,8 @@ def create_fastapi_app(settings):
         allow_origins=["http://localhost:5173",
                        "http://127.0.0.1:5173",
                        "http://localhost:8000",
-                       "http://127.0.0.1:8000",
+                       "http://192.168.2.82:5173",
+                       "https://localhost:5173",
                        ],
         allow_credentials=True,
         allow_methods=["*"],
@@ -46,7 +47,7 @@ def create_fastapi_app(settings):
     app.include_router(rules_router)
     app.include_router(tasks_router)
     app.include_router(user_router)
-    
+
     # Store the WebSocket manager in app state for access from AppManager
     app.state.websocket_manager = manager
 
