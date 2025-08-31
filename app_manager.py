@@ -4,7 +4,7 @@ from bridge import Bridge
 from pipeline.paradox_detector import ParadoxDetector
 from pipeline.paradox2_detector import Paradox2Detector
 from llm_connectors.deepseek_chat import DeepSeekChat
-from fastapi_app import create_fastapi_app
+from fastapi_app import create_fastapi_app, get_ssl_context
 from fastapi_server.websocket_manager import manager
 import asyncio
 import datetime
@@ -40,6 +40,8 @@ class AppManager(QObject):
         # Import and store the WebSocket manager
         self.fastapi_app.state.websocket_manager = manager
 
+        ssl_context = get_ssl_context()
+
         # Start FastAPI in a separate thread
         import uvicorn
         self.fastapi_thread = threading.Thread(
@@ -47,12 +49,14 @@ class AppManager(QObject):
                 self.fastapi_app,
                 host="0.0.0.0",
                 port=8000,
-                log_level="info"
+                log_level="info",
+                ssl_certfile="ssl/cert.pem" if ssl_context else None,
+                ssl_keyfile="ssl/key.pem" if ssl_context else None
             ),
             daemon=True
         )
         self.fastapi_thread.start()
-        print("FastAPI server started in a separate thread.")
+        print("FastAPI server started in a separate thread." + (" (HTTPS)" if ssl_context else " (HTTP)"))
 
     def add_analysis_task(self, task_id):
         """Add a new analysis task to be processed"""

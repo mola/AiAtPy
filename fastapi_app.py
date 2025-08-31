@@ -17,7 +17,7 @@ from database.models import User
 import logging
 import datetime
 import asyncio
-
+import ssl
 logger = logging.getLogger(__name__)
 
 def create_fastapi_app(settings):
@@ -144,6 +144,19 @@ def create_fastapi_app(settings):
 
     return app
 
+def get_ssl_context():
+    """Create SSL context for HTTPS"""
+    # Path to your SSL certificate and key files
+    cert_file = "ssl/cert.pem"
+    key_file = "ssl/key.pem"
+    
+    if os.path.exists(cert_file) and os.path.exists(key_file):
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(cert_file, key_file)
+        return ssl_context
+    else:
+        logger.warning("SSL certificate files not found. Using HTTP instead.")
+        return None
 
 async def get_db():
     db = MainSessionLocal()

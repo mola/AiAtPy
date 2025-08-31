@@ -4,14 +4,19 @@ import json
 import requests
 import getpass
 from urllib.parse import urlparse
+import ssl
 
 class WebSocketTester:
     def __init__(self):
-        self.base_url = "http://127.0.0.1:8000/api"
-        self.ws_url = "ws://127.0.0.1:8000/ws"
+        self.base_url = "https://127.0.0.1:8000/api"
+        self.ws_url = "wss://127.0.0.1:8000/ws"
         self.session = requests.Session()
         self.token = None
         
+        # Disable SSL verification for testing
+        self.session.verify = False
+        requests.packages.urllib3.disable_warnings()
+
         # Configure session
         self.session.headers.update({
             'Accept': 'application/json',
@@ -50,7 +55,7 @@ class WebSocketTester:
     def test_hello_endpoint(self):
         """Test the sample HTTP endpoint"""
         try:
-            response = requests.get("http://127.0.0.1:8000/sample-function")
+            response = requests.get("https://127.0.0.1:8000/sample-function", verify=False)
             if response.status_code == 200:
                 print("✓ Hello endpoint test successful!")
                 print(f"✓ Response: {response.json()}")
@@ -71,8 +76,13 @@ class WebSocketTester:
         try:
             print(f"✓ Connecting to WebSocket with token: {self.token[:20]}...")
             
+            # Disable SSL verification for testing (remove in production)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
             # Connect to WebSocket with token as query parameter
-            async with websockets.connect(f"{self.ws_url}?token={self.token}") as websocket:
+            async with websockets.connect(f"{self.ws_url}?token={self.token}", ssl=ssl_context) as websocket:
                 print("✓ WebSocket connection established!")
                 
                 # Test sending and receiving messages
@@ -140,7 +150,13 @@ class WebSocketTester:
             print("✓ Type 'exit' to quit, 'ping' to test, or any other message to send")
             print("✓ Press Ctrl+C to stop")
             
-            async with websockets.connect(f"{self.ws_url}?token={self.token}") as websocket:
+            # Disable SSL verification for testing (same as in test_websocket_connection)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+
+            async with websockets.connect(f"{self.ws_url}?token={self.token}", ssl=ssl_context) as websocket:
                 print("✓ Connected! Start typing messages:")
                 
                 # Start a task to receive messages
