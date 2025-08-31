@@ -38,12 +38,7 @@ class AuthClient:
             kwargs['timeout'] = self.timeout
             
         try:
-            # For GET requests, use requests.get directly to avoid session issues
-            if method.__name__ == 'get' and endpoint == "/sample-function":
-                response = requests.get(url, verify=False, timeout=self.timeout, **kwargs)
-            else:
-                response = method(url, **kwargs)
-                
+            response = method(url, **kwargs)
             response.raise_for_status()  # Raise exception for bad status codes
             return response
             
@@ -146,7 +141,6 @@ class AuthClient:
         """Test the sample hello endpoint"""
         print("Testing hello endpoint...")
         
-        # Use direct requests.get for hello endpoint to avoid session SSL issues
         try:
             response = requests.get(
                 "https://127.0.0.1:8000/sample-function", 
@@ -167,6 +161,79 @@ class AuthClient:
             print(f"✗ Hello endpoint error: {e}")
             return False
 
+    def get_my_sessions(self):
+        """Get list of active sessions for the current user"""
+        print("Fetching active sessions...")
+        
+        response = self._make_request(self.session.get, "/sessions")
+        
+        if response and response.status_code == 200:
+            sessions = response.json()
+            print("✓ Sessions retrieved successfully!")
+            print(f"Found {len(sessions)} active sessions:")
+            
+            for i, session in enumerate(sessions, 1):
+                print(f"\nSession {i}:")
+                print(f"  Session ID: {session['session_id']}")
+                print(f"  Created: {self._format_timestamp(session['created_at'])}")
+                print(f"  Expires: {self._format_timestamp(session['expires_at'])}")
+                print(f"  Status: {'Active' if session['is_active'] else 'Inactive'}")
+                if session.get('user_agent'):
+                    print(f"  User Agent: {session['user_agent'][:50]}...")
+                if session.get('ip_address'):
+                    print(f"  IP Address: {session['ip_address']}")
+            
+            return sessions
+        elif response:
+            print(f"✗ Failed to get sessions: {response.status_code} - {response.text}")
+        else:
+            print("✗ Failed to get sessions: No response received")
+            
+        return None
+
+    def delete_session(self, session_id):
+        """Delete a specific session"""
+        print(f"Deleting session {session_id}...")
+        
+        response = self._make_request(
+            self.session.delete, 
+            f"/sessions/{session_id}"
+        )
+        
+        if response and response.status_code == 200:
+            print("✓ Session deleted successfully!")
+            return True
+        elif response:
+            print(f"✗ Failed to delete session: {response.status_code} - {response.text}")
+        else:
+            print("✗ Failed to delete session: No response received")
+            
+        return False
+
+    def delete_all_sessions(self):
+        """Delete all sessions for the current user"""
+        print("Deleting all sessions...")
+        
+        response = self._make_request(
+            self.session.post, 
+            "/sessions/terminate-all"
+        )
+        
+        if response and response.status_code == 200:
+            print("✓ All sessions deleted successfully!")
+            return True
+        elif response:
+            print(f"✗ Failed to delete sessions: {response.status_code} - {response.text}")
+        else:
+            print("✗ Failed to delete sessions: No response received")
+            
+        return False
+
+    def _format_timestamp(self, timestamp):
+        """Format Unix timestamp to readable date"""
+        from datetime import datetime
+        return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
     def get_session_info(self):
         """Display current session information"""
         print("\nSession Information:")
@@ -175,6 +242,57 @@ class AuthClient:
         print(f"Headers: {dict(self.session.headers)}")
         print(f"Timeout: {self.timeout} seconds")
         print(f"SSL Verification: {'Enabled' if self.session.verify else 'Disabled'}")
+
+    def session_management_menu(self):
+        """Session management menu with only delete options"""
+        while True:
+            print("\nSession Management:")
+            print("1. List sessions (to see what to delete)")
+            print("2. Delete a specific session")
+            print("3. Delete all sessions")
+            print("4. Back to main menu")
+            
+            try:
+                choice = input("Choose an option: ").strip()
+                
+                if choice == "1":
+                    sessions = self.get_my_sessions()
+                    if sessions:
+                        print(f"\nYou have {len(sessions)} active session(s)")
+                
+                elif choice == "2":
+                    sessions = self.get_my_sessions()
+                    if sessions and len(sessions) > 0:
+                        try:
+                            session_num = int(input("Enter session number to delete: "))
+                            if 1 <= session_num <= len(sessions):
+                                session_id = sessions[session_num - 1]['session_id']
+                                self.delete_session(session_id)
+                            else:
+                                print("Invalid session number")
+                        except ValueError:
+                            print("Please enter a valid number")
+                    else:
+                        print("No active sessions to delete")
+                
+                elif choice == "3":
+                    confirm = input("Are you sure you want to delete ALL sessions? (y/N): ").lower()
+                    if confirm == 'y':
+                        self.delete_all_sessions()
+                    else:
+                        print("Operation cancelled")
+                
+                elif choice == "4":
+                    break
+                
+                else:
+                    print("Invalid option. Please try again.")
+                    
+            except KeyboardInterrupt:
+                print("\nOperation cancelled")
+                break
+            except Exception as e:
+                print(f"Unexpected error: {e}")
 
 if __name__ == "__main__":
     # Create a custom SSL context that doesn't verify certificates
@@ -189,12 +307,13 @@ if __name__ == "__main__":
 
     if client.login():
         while True:
-            print("\nMenu:")
+            print("\nMain Menu:")
             print("1. Test protected endpoint")
             print("2. Test hello endpoint")
             print("3. Show session info")
-            print("4. Logout")
-            print("5. Exit")
+            print("4. Manage sessions (delete)")
+            print("5. Logout")
+            print("6. Exit")
             
             try:
                 choice = input("Choose an option: ").strip()
@@ -206,9 +325,11 @@ if __name__ == "__main__":
                 elif choice == "3":
                     client.get_session_info()
                 elif choice == "4":
+                    client.session_management_menu()
+                elif choice == "5":
                     if client.logout():
                         break
-                elif choice == "5":
+                elif choice == "6":
                     print("Exiting...")
                     break
                 else:

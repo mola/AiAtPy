@@ -18,10 +18,15 @@ import logging
 import datetime
 import asyncio
 import ssl
+from jose import JWTError, jwt  # Add this import
+
 logger = logging.getLogger(__name__)
 
 def create_fastapi_app(settings):
-    app = FastAPI(title="AIAT API", version="1.0.0")
+    app = FastAPI(title="Diar API", 
+    version="1.0.0",
+    description="DIAR Application API Documentation",
+    )
     
     # CORS configuration
     app.add_middleware(
@@ -39,7 +44,6 @@ def create_fastapi_app(settings):
     app.include_router(auth_router)
     app.include_router(rules_router)
     app.include_router(tasks_router)
-
 
     # Store the WebSocket manager in app state for access from AppManager
     app.state.websocket_manager = manager
@@ -67,7 +71,6 @@ def create_fastapi_app(settings):
         
         raise HTTPException(status_code=404, detail="File not found")
 
-
     @app.get("/sample-function")
     async def sample_function():
         # A simple example endpoint
@@ -84,6 +87,26 @@ def create_fastapi_app(settings):
             # Verify token first
             if not token:
                 await websocket.close(code=1008, reason="Token required")
+                return
+            
+            try:
+                # Decode token and validate session
+                payload = jwt.decode(token, AiAtConfig.get_jwt_secret(), algorithms=["HS256"])
+                user_id = payload.get("sub")
+                session_id = payload.get("sid")
+                
+                if not user_id or not session_id:
+                    await websocket.close(code=1008, reason="Invalid token")
+                    return
+                
+                # Validate session
+                from fastapi_server.auth import validate_session
+                if not validate_session(session_id):
+                    await websocket.close(code=1008, reason="Session expired")
+                    return
+                    
+            except JWTError:
+                await websocket.close(code=1008, reason="Invalid token")
                 return
             
             # Create a simple request-like object for auth
@@ -141,7 +164,6 @@ def create_fastapi_app(settings):
                 await websocket.close(code=1011, reason="Internal error")
             except:
                 pass
-
     return app
 
 def get_ssl_context():

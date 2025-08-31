@@ -11,7 +11,20 @@ class User(MainBase):
     email = Column(String(100), unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Integer, default=1)  # 1=active, 0=inactive
+    is_admin = Column(Boolean, default=False)
 
+class UserSession(MainBase):
+    __tablename__ = 'user_sessions'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    session_id = Column(String(64), unique=True, nullable=False, index=True)
+    created_at = Column(BigInteger, default=lambda: int(time.time()))
+    expires_at = Column(BigInteger, nullable=False)
+    is_active = Column(Boolean, default=True)
+    user_agent = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    
 class AnalysisTask(MainBase):
     __tablename__ = 'analysis_tasks'
     id = Column(Integer, primary_key=True, index=True)
