@@ -12,6 +12,7 @@ from fastapi_server.auth import auth_router, get_current_user, oauth2_scheme
 from fastapi_server.rules import router as rules_router
 from fastapi_server.routers import router as tasks_router
 from fastapi_server.websocket_manager import manager
+from fastapi_server.user_management import user_router
 from aiatconfig import AiAtConfig
 from database.models import User
 import logging
@@ -44,7 +45,8 @@ def create_fastapi_app(settings):
     app.include_router(auth_router)
     app.include_router(rules_router)
     app.include_router(tasks_router)
-
+    app.include_router(user_router)
+    
     # Store the WebSocket manager in app state for access from AppManager
     app.state.websocket_manager = manager
 

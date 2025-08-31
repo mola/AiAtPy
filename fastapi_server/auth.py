@@ -252,10 +252,10 @@ async def login_with_json(login_request: LoginRequest, response: Response, reque
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
+        httponly=False,
         max_age=4 * 60 * 60,
         samesite="lax",
-        secure=False
+        secure=True
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -353,7 +353,7 @@ async def delete_all_user_sessions_admin(user_id: int, current_user: User = Depe
     
     delete_all_sessions(user_id)
     return {"message": "All sessions deleted permanently"}
-    
+
 @auth_router.post("/logout")
 async def logout(response: Response, current_user: User = Depends(get_current_user)):
     """Logout endpoint that clears the current session"""
