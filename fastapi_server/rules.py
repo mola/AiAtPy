@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi.responses import JSONResponse
-from typing import Optional, List
+from typing import Optional, List, Any
 import logging
 from pydantic import BaseModel
 
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api", tags=["laws","topics"])
 class LawResponse(BaseModel):
     id: int
     caption: str
-    law_no: int
+    law_no: Optional[int] = None
     approve_date: Optional[str] = None
     content_text: Optional[str] = None
 
@@ -34,13 +34,13 @@ class SectionResponse(BaseModel):
     caption: str
     text: str
     order: Optional[int] = None
-    section_no: Optional[str] = None
+    section_no: Optional[int] = None
     section_level: Optional[int] = None
-    full_path: Optional[str] = None
-    law_id: Optional[int] = None
+    full_path: str
+    law_id: int
     parent_id: Optional[int] = None
     status_caption: Optional[str] = None
-    topics: Optional[List[dict]] = None
+    topics: List[Any] = []
 
 class SearchRequest(BaseModel):
     q: str
@@ -64,6 +64,17 @@ class TopicResponse(BaseModel):
     ID: int
     CAPTION: str
     children: List['TopicResponse'] = []
+
+class SectionBasic(BaseModel):
+    id: int
+    caption: str
+    text: str
+    order: Optional[int] = None
+    section_no: Optional[int] = None
+
+class LawWithSectionsResponse(BaseModel):
+    law: dict
+    sections: List[SectionBasic]
 
 @router.get("/laws/{law_id}", response_model=LawResponse)
 async def get_law(law_id: int, current_user: User = Depends(get_current_user)):
@@ -103,7 +114,7 @@ async def search_laws(
         return [{
             "id": law.ID,
             "caption": law.CAPTION,
-            "law_no": law.LAWNO,
+            "law_no": law.LAWNO if law.LAWNO is not None else 0,
             "approve_date": law.APPROVEDATE
         } for law in laws]
     except Exception as e:
@@ -174,7 +185,7 @@ async def get_section(
         logger.error(f"Error getting section {section_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/laws/{law_id}/sections", response_model=List[SectionResponse])
+@router.get("/laws/{law_id}/sections", response_model=LawWithSectionsResponse)
 async def get_law_with_all_sections(
     law_id: int,
     current_user: User = Depends(get_current_user)
@@ -183,25 +194,27 @@ async def get_law_with_all_sections(
     Get a law with all its sections
     """
     try:
-        law_with_sections = get_law_with_sections(law_id)
-        if not law_with_sections:
+        result = get_law_with_sections(law_id)
+        if not result:
             raise HTTPException(status_code=404, detail=f"Law with ID {law_id} not found")
 
-        return [{
-            "id": section.ID,
-            "caption": section.CAPTION,
-            "text": section.SECTIONTEXT,
-            "order": section.TEXTORDER,
-            "section_no": section.SECTIONTYPENO,
-            "section_level": section.SECTIONLEVEL,
-            "full_path": section.FULLPATH,
-            "law_id": section.F_LWLAWID,
-            "parent_id": section.F_PARENTID
-        } for section in law_with_sections.sections]
+        return {
+            "law": {
+                "id": result["law"].ID,
+                "caption": result["law"].CAPTION
+            },
+            "sections": [{
+                "id": section.ID,
+                "caption": section.CAPTION if section.CAPTION is not None else "",
+                "text": section.SECTIONTEXT if section.SECTIONTEXT is not None else "",
+                "order": section.TEXTORDER,
+                "section_no": int(section.SECTIONTYPENO) if section.SECTIONTYPENO is not None else None
+            } for section in result["sections"]]
+        }
+            
     except Exception as e:
         logger.error(f"Error getting law sections {law_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
 
 def build_topic_tree(topic_id: int, db_r):
     topic = db_r.query(LWTopic).filter(LWTopic.ID == topic_id).first()
