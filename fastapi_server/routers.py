@@ -37,7 +37,7 @@ class AnalyzeLawRequest(BaseModel):
 
 class AnalyzeRulesRequest(BaseModel):
     law_id: int
-    section_no: str
+    section_no: int
     check_law_id: str
     topic_ids: Optional[List[int]] = None
 
@@ -83,7 +83,8 @@ async def search_similar(
 
 @router.post("/analyze")
 async def analyze_law(
-    request: AnalyzeLawRequest,
+    fastapi_request: Request,
+    request_body: AnalyzeLawRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -94,12 +95,12 @@ async def analyze_law(
         # Store all relevant data in JSON format
         task_data = {
             "type": "custom",
-            "prompt": request.prompt,
-            "prompt_title": request.prompt_title,
-            "system_prompt": request.system_prompt,
-            "check_law_id": request.check_law_id,
-            "compare_all": request.check_law_id == "*",
-            "topic_ids": request.topic_ids
+            "prompt": request_body.prompt,
+            "prompt_title": request_body.prompt_title,
+            "system_prompt": request_body.system_prompt,
+            "check_law_id": request_body.check_law_id,
+            "compare_all": request_body.check_law_id == "*",
+            "topic_ids": request_body.topic_ids
         }
         
         task = create_analysis_task(
@@ -108,8 +109,8 @@ async def analyze_law(
             data=task_data
         )
         
-        # Pass to AppManager (assuming it's available in app state)
-        # app.state.app_manager.add_analysis_task(task.id)
+        app_manager = fastapi_request.app.state.app_manager
+        app_manager.add_analysis_task(task.id)
         
         return {
             "message": "Custom law analysis started",
@@ -123,7 +124,8 @@ async def analyze_law(
 
 @router.post("/analyze_rules")
 async def analyze_rules(
-    request: AnalyzeRulesRequest,
+    fastapi_request: Request,
+    request_body: AnalyzeRulesRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -134,11 +136,11 @@ async def analyze_rules(
         # Store all relevant data in JSON format
         task_data = {
             "type": "existing",
-            "law_id": request.law_id,
-            "section_no": request.section_no,
-            "check_law_id": request.check_law_id,
-            "compare_all": request.check_law_id == "*",
-            "topic_ids": request.topic_ids
+            "law_id": request_body.law_id,
+            "section_no": request_body.section_no,
+            "check_law_id": request_body.check_law_id,
+            "compare_all": request_body.check_law_id == "*",
+            "topic_ids": request_body.topic_ids
         }
         
         task = create_analysis_task(
@@ -147,8 +149,8 @@ async def analyze_rules(
             data=task_data
         )
         
-        # Pass to AppManager
-        # app.state.app_manager.add_analysis_rules_task(task.id)
+        app_manager = fastapi_request.app.state.app_manager
+        app_manager.add_analysis_rules_task(task.id)
         
         return {
             "message": "Existing law analysis started",
