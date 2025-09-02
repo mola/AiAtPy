@@ -8,7 +8,7 @@ from fastapi_app import create_fastapi_app, get_ssl_context
 from fastapi_server.websocket_manager import manager
 import asyncio
 import datetime
-
+from typing import Optional, List, Dict, Any
 class AppManager(QObject):
     def __init__(self, settings,searcher):
         super().__init__()
@@ -73,21 +73,36 @@ class AppManager(QObject):
         print(f"New analysis task received task id: {data}")
         self.paradox2_detector.process_task(data)
 
-    def chat(self, msg):
-        """Send a chat message and get the assistant's response"""
+    def chat(self, message: str) -> Dict[str, Any]:
+        """Send a chat message and get the assistant's response with references"""
         try:
-            response = self.deepseek_chat.send_message(msg)
+            # Get the response from your chat service
+            response_text = self.deepseek_chat.send_message(message)
+            
+            # Extract references from the response (you'll need to implement this)
+            references = self.extract_references(response_text)
+            
             return {
-                "status": "success",
-                "message": response
+                "response": response_text,
+                "references": references
             }
         except Exception as e:
             print(f"Error in chat: {str(e)}")
             return {
-                "status": "error",
-                "message": "Failed to process your message"
+                "response": "Failed to process your message",
+                "references": []
             }
 
+
+    def extract_references(self, response_text: str) -> List[Dict]:
+        """
+        Extract references from the response text.
+        This is a placeholder - implement your own logic based on your domain.
+        """
+        references = []
+                
+        return references
+        
     async def send_custom_log_to_user_async(self, user_id: int, log_message: str) -> bool:
         """Async version for use within async contexts"""
         try:

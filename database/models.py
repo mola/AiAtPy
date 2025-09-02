@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, Integer, String, Text, DateTime, JSON, Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database.session import MainBase
 
 class User(MainBase):
@@ -51,3 +52,41 @@ class ComparisonResult(MainBase):
     
     # Optional: Add relationship
     task = relationship("AnalysisTask", backref="comparison_results")
+
+# Add these classes to your existing models.py
+class ChatSession(MainBase):
+    __tablename__ = 'chat_sessions'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    title = Column(String(255), nullable=False)  # Title of the chat session
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    user = relationship("User", backref="chat_sessions")
+    messages = relationship("ChatMessage", backref="session", cascade="all, delete-orphan")
+
+class ChatMessage(MainBase):
+    __tablename__ = 'chat_messages'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey('chat_sessions.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    response = Column(Text, nullable=True)
+    is_user_message = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    liked = Column(Boolean, default=None)
+    references = Column(JSON, nullable=True)
+    
+    user = relationship("User", backref="chat_messages")
+
+class ChatFeedback(MainBase):
+    __tablename__ = 'chat_feedback'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey('chat_messages.id'), nullable=False)
+    rating = Column(Boolean, nullable=False)
+    feedback_text = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=func.now())
