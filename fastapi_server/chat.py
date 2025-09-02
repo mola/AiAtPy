@@ -17,11 +17,11 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # Pydantic Models
 class ChatRequest(BaseModel):
     msg: str
-    session_id: Optional[int] = None  # Optional: send to specific session
+    session_id: Optional[int] = None
 
 class FeedbackRequest(BaseModel):
     message_id: int
-    rating: bool
+    rating: bool  # True=like, False=dislike
     feedback_text: Optional[str] = None
 
 class SessionTitleRequest(BaseModel):
@@ -64,7 +64,6 @@ async def send_chat_message(
         
         # Get or create active session
         if chat_request.session_id:
-            # Use specified session
             session = db.query(ChatSession).filter(
                 ChatSession.id == chat_request.session_id,
                 ChatSession.user_id == current_user.id
@@ -72,14 +71,12 @@ async def send_chat_message(
             if not session:
                 raise HTTPException(status_code=404, detail="Session not found")
         else:
-            # Get active session or create new one
             session = db.query(ChatSession).filter(
                 ChatSession.user_id == current_user.id,
                 ChatSession.is_active == True
             ).first()
             
             if not session:
-                # Create new session with first message as title
                 session = ChatSession(
                     user_id=current_user.id,
                     title=chat_request.msg[:50] + "..." if len(chat_request.msg) > 50 else chat_request.msg,
@@ -134,6 +131,143 @@ async def send_chat_message(
     finally:
         db.close()
 
+@router.post("/feedback")
+async def provide_feedback(
+    feedback_request: FeedbackRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Provide feedback (like/dislike) for a chat message
+    """
+    db = MainSessionLocal()
+    try:
+        # Check if message exists and belongs to user
+        message = db.query(ChatMessage).filter(
+            ChatMessage.id == feedback_request.message_id,
+            ChatMessage.user_id == current_user.id,
+            ChatMessage.is_user_message == False  # Only allow feedback on AI responses
+        ).first()
+        
+        if not message:
+            raise HTTPException(status_code=404, detail="Message not found")
+        
+        # Update message rating
+        message.liked = feedback_request.rating
+        
+        # Create or update feedback record
+        feedback = db.query(ChatFeedback).filter(
+            ChatFeedback.message_id == feedback_request.message_id
+        ).first()
+        
+        if feedback:
+            # Update existing feedback
+            feedback.rating = feedback_request.rating
+            feedback.feedback_text = feedback_request.feedback_text
+        else:
+            # Create new feedback
+            feedback = ChatFeedback(
+                message_id=feedback_request.message_id,
+                rating=feedback_request.rating,
+                feedback_text=feedback_request.feedback_text
+            )
+            db.add(feedback)
+        
+        db.commit()
+        
+        return JSONResponse(status_code=200, content={
+            "success": True,
+            "message": "Feedback recorded successfully",
+            "rating": feedback_request.rating
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recording feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to record feedback")
+    finally:
+        db.close()
+
+@router.get("/feedback/{message_id}")
+async def get_feedback(
+    message_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get feedback for a specific message
+    """
+    db = MainSessionLocal()
+    try:
+        # Check if message exists and belongs to user
+        message = db.query(ChatMessage).filter(
+            ChatMessage.id == message_id,
+            ChatMessage.user_id == current_user.id,
+            ChatMessage.is_user_message == False
+        ).first()
+        
+        if not message:
+            raise HTTPException(status_code=404, detail="Message not found")
+        
+        # Get feedback record
+        feedback = db.query(ChatFeedback).filter(
+            ChatFeedback.message_id == message_id
+        ).first()
+        
+        return JSONResponse(status_code=200, content={
+            "message_id": message_id,
+            "liked": message.liked,
+            "feedback": {
+                "rating": feedback.rating if feedback else None,
+                "feedback_text": feedback.feedback_text if feedback else None,
+                "created_at": feedback.created_at.isoformat() if feedback else None
+            } if feedback else None
+        })
+        
+    finally:
+        db.close()
+
+@router.delete("/feedback/{message_id}")
+async def delete_feedback(
+    message_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete feedback for a message (reset like/dislike)
+    """
+    db = MainSessionLocal()
+    try:
+        # Check if message exists and belongs to user
+        message = db.query(ChatMessage).filter(
+            ChatMessage.id == message_id,
+            ChatMessage.user_id == current_user.id,
+            ChatMessage.is_user_message == False
+        ).first()
+        
+        if not message:
+            raise HTTPException(status_code=404, detail="Message not found")
+        
+        # Reset message rating
+        message.liked = None
+        
+        # Delete feedback record
+        feedback = db.query(ChatFeedback).filter(
+            ChatFeedback.message_id == message_id
+        ).first()
+        
+        if feedback:
+            db.delete(feedback)
+        
+        db.commit()
+        
+        return JSONResponse(status_code=200, content={
+            "success": True,
+            "message": "Feedback removed successfully"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error deleting feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to remove feedback")
+    finally:
+        db.close()
+
 @router.post("/sessions/{session_id}/title")
 async def update_session_title(
     session_id: int,
@@ -185,7 +319,6 @@ async def get_chat_sessions(
         
         session_summaries = []
         for session in sessions:
-            # Count messages in this session
             message_count = db.query(ChatMessage).filter(
                 ChatMessage.session_id == session.id
             ).count()
@@ -262,7 +395,6 @@ async def reset_chat(
     """
     db = MainSessionLocal()
     try:
-        # Deactivate current active session
         session = db.query(ChatSession).filter(
             ChatSession.user_id == current_user.id,
             ChatSession.is_active == True
@@ -272,7 +404,6 @@ async def reset_chat(
             session.is_active = False
             db.commit()
         
-        # Also reset AppManager's chat state
         app_manager = request.app.state.app_manager
         app_manager.chat_reset()
         
@@ -305,7 +436,6 @@ async def delete_session(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # This will cascade delete all messages due to the relationship
         db.delete(session)
         db.commit()
         
