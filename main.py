@@ -28,7 +28,6 @@ AiAtConfig.initialize_config()
 # NOW it's safe to import other modules that might depend on AiAtConfig
 from database.session import init_db
 from app_manager import AppManager
-from flask_server.websocket_manager import WebSocketManager
 import websockets
 
 def initialize_settings():
@@ -37,8 +36,8 @@ def initialize_settings():
     settings = QSettings(settings_path, QSettings.IniFormat)
 
     defaults = {
-        "flask/secret_key": "your_secret_key_here",
-        "flask/static_folder": "frontend",
+        "fastapi/secret_key": "your_secret_key_here",
+        "fastapi/static_folder": "frontend",
     }
 
     for key, value in defaults.items():

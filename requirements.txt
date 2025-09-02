@@ -1,9 +1,5 @@
 PySide6
-flask
-flask_login
-flask-cors
 openai
 sqlalchemy
-flask_jwt_extended
 python-dateutil
 requests
