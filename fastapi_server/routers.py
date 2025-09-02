@@ -41,9 +41,6 @@ class AnalyzeRulesRequest(BaseModel):
     check_law_id: str
     topic_ids: Optional[List[int]] = None
 
-class ChatRequest(BaseModel):
-    msg: str
-
 class TaskResponse(BaseModel):
     task_id: int
     status: str
@@ -123,60 +120,6 @@ async def analyze_law(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
-
-@router.post("/chat")
-async def chat(
-    request: Request,  # Inject Request to access app.state
-    chat_request: ChatRequest,  # Renamed for clarity; use your existing name if different
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Chat endpoint - Calls AppManager's chat method
-    """
-    if not chat_request.msg:
-        raise HTTPException(status_code=400, detail="Message is required")
-    
-    try:
-        # Access AppManager from app state
-        app_manager = request.app.state.app_manager
-        
-        # Call the chat method
-        response = app_manager.chat(chat_request.msg)
-        
-        # Return the response from AppManager
-        return JSONResponse(status_code=200, content=response)
-    except AttributeError:
-        logger.error("AppManager not found in app state")
-        raise HTTPException(status_code=500, detail="Internal server error: AppManager not available")
-    except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to process chat message")
-
-
-@router.post("/chat_reset")
-async def chat_reset(
-    request: Request,  # Inject Request to access app.state
-    current_user: User = Depends(get_current_user)
-    ):
-    """
-    Reset chat session - Calls AppManager's chat_reset method
-    """
-    try:
-        # Access AppManager from app state
-        app_manager = request.app.state.app_manager
-        
-        # Call the chat_reset method
-        response = app_manager.chat_reset()
-        
-        # Return the response from AppManager
-        return JSONResponse(status_code=200, content=response)
-    except AttributeError:
-        logger.error("AppManager not found in app state")
-        raise HTTPException(status_code=500, detail="Internal server error: AppManager not available")
-    except Exception as e:
-        logger.error(f"Error resetting chat: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to reset chat")
-
 
 @router.post("/analyze_rules")
 async def analyze_rules(
