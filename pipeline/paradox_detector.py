@@ -7,6 +7,7 @@ from database.models_rules import LWSection
 from typing import Dict, List
 import json
 import time
+import numpy as np
 
 class ParadoxDetector(QObject):
     all_comparisons_complete = Signal(int, list)  # task_id, results
@@ -17,7 +18,7 @@ class ParadoxDetector(QObject):
         self.app_manager = app_manager
         self.thread_pool = QThreadPool.globalInstance()
         # Set max threads (e.g., 4-8 depending on system capabilities)
-        self.thread_pool.setMaxThreadCount(32)
+        self.thread_pool.setMaxThreadCount(96)
         self.active_tasks: Dict[int, Dict] = {}
         self.task_data = None
         self.searcher = searcher
@@ -49,7 +50,17 @@ class ParadoxDetector(QObject):
                 search_start = time.time()
                 section_ids = self.searcher.get_section_ids(prompt)
                 search_end = time.time()
+                print("section ids: " , section_ids)
                 print(f"---- search time : {search_end - search_start} -----")
+                print("ids:" , section_ids)
+
+                # Save the section_ids into task.data
+                # Convert section_ids from numpy.int64 to Python int
+                section_ids_numpy = [int(section_id) if isinstance(section_id, np.int64) else section_id for section_id in section_ids]
+        
+                self.task_data['section_ids'] = section_ids_numpy
+                task.data = self.task_data
+                db.commit()
                 print("ids:", section_ids)
                 
                 # Send search completion log
