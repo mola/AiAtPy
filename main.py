@@ -28,7 +28,6 @@ AiAtConfig.initialize_config()
 # NOW it's safe to import other modules that might depend on AiAtConfig
 from database.session import init_db
 from app_manager import AppManager
-from flask_server.websocket_manager import WebSocketManager
 import websockets
 
 def initialize_settings():
@@ -37,8 +36,8 @@ def initialize_settings():
     settings = QSettings(settings_path, QSettings.IniFormat)
 
     defaults = {
-        "flask/secret_key": "your_secret_key_here",
-        "flask/static_folder": "frontend",
+        "fastapi/secret_key": "your_secret_key_here",
+        "fastapi/static_folder": "frontend",
     }
 
     for key, value in defaults.items():
@@ -46,34 +45,6 @@ def initialize_settings():
             settings.setValue(key, value)
 
     settings.sync()
-
-# Global to hold manager and loop
-websocket_loop = None
-websocket_thread = None
-
-def start_websocket_server():
-    global websocket_loop
-    websocket_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(websocket_loop)
-
-    manager = WebSocketManager()
-    port = 8001
-
-    # In start_websocket_server() function:
-    async def websocket_handler(websocket):
-        await manager.handler(websocket)  # Now only one argument
-
-    async def server():
-        async with websockets.serve(
-            websocket_handler, "", port
-        ):
-            print(f"WebSocket server running on ws://localhost:{port}/ws")
-            await asyncio.Future()  # Run forever
-
-    websocket_loop.run_until_complete(server())
-    websocket_loop.run_forever()
-
-
 
 def sigint_handler(sig, frame):
     print("\nShutting down gracefully...")
@@ -93,8 +64,6 @@ def run():
     except Exception as e:
         print(f"Exception in Qt event loop: {e}")
     finally:
-        if websocket_thread and websocket_thread.is_alive():
-            websocket_thread.join()
         app_manager.cleanup()
         print("Application terminated.")
 
@@ -108,10 +77,5 @@ if __name__ == "__main__":
     searcher = create_embedding_search_instance()
     app_manager = AppManager(settings,searcher)
     app_manager.initialize()
-
-
-    # Start WebSocket server in background thread
-    websocket_thread = threading.Thread(target=start_websocket_server, daemon=True)
-    websocket_thread.start()
 
     run()

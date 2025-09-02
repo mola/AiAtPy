@@ -2,8 +2,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from aiatconfig import AiAtConfig
-from werkzeug.security import generate_password_hash
 import os
+from passlib.context import CryptContext
+
+# Password hashing context (same as in auth.py)
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
+
+def get_password_hash(password):
+    """Create a password hash using sha256_crypt"""
+    return pwd_context.hash(password)
 
 # Database configuration
 DB_CONFIG = {
@@ -71,9 +78,9 @@ def init_db():
         admin_user = get_user_by_username(db, admin_username)
         
         if admin_user is None:
-            # Create admin user
+            # Create admin user using sha256_crypt hashing
             from .crud import create_user
-            hashed_password = generate_password_hash("admin")  # Change to strong password
+            hashed_password = get_password_hash("admin")  # Use consistent hashing
             create_user(
                 db, 
                 username=admin_username,
@@ -82,8 +89,17 @@ def init_db():
             )
             db.commit()
             print("Admin user created successfully")
+            print(f"Admin password hash: {hashed_password}")
         else:
             print("Admin user already exists")
+            print(f"Current admin password hash: {admin_user.password_hash}")
+            
+            # Update existing admin password to use consistent sha256_crypt hashing
+            if not admin_user.password_hash.startswith('$2'):  # If not sha256_crypt
+                print("Updating admin password to use sha256_crypt...")
+                admin_user.password_hash = get_password_hash("admin")
+                db.commit()
+                print("Admin password updated to sha256_crypt")
     except Exception as e:
         print(f"Error creating admin user: {str(e)}")
         db.rollback()

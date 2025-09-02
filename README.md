@@ -12,9 +12,6 @@ A system that detects logical paradoxes between new Iranian laws and existing le
 iran-law-analyzer/
 ├── main.py                  # Application entry point
 ├── app_manager.py           # Core coordinator (Qt signals/slots)
-├── flask_server/            # Web API implementation
-│   ├── routes.py            # API endpoint definitions
-│   └── auth.py              # User authentication
 ├── database/                # Law database management
 │   ├── models.py            # Data models (Law, User)
 │   ├── crud.py              # Database operations (Create/Read/Update/Delete)

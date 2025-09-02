@@ -210,6 +210,7 @@ db
 resources
 conf
 frontend
+ssl
 
 *.pyproject.user
 *.db
