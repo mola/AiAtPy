@@ -150,6 +150,10 @@ class ParadoxDetector(QObject):
         # Update the task's current section index
         self.active_tasks[task_id]['current_section_index'] = current_index
         
+        
+        if current_index> 0:
+            self.send_log_to_user(task_info['user_id'], f"Analysis task {task_id} start")
+
         # Start all tasks in batch
         for t in batch:
             self.thread_pool.start(t)

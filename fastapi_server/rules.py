@@ -3,8 +3,9 @@ from fastapi.responses import JSONResponse
 from typing import Optional, List, Any
 import logging
 from pydantic import BaseModel
+from sqlalchemy import text
 
-from database.session import RulesSessionLocal
+from database.session import MainSessionLocal ,RulesSessionLocal
 from database.law_repository import (
     get_lwlaw_by_id,
     search_laws_by_text,
@@ -75,6 +76,35 @@ class SectionBasic(BaseModel):
 class LawWithSectionsResponse(BaseModel):
     law: dict
     sections: List[SectionBasic]
+
+class TrigramSearchResult(BaseModel):
+    id: int
+    caption: str
+    similarity: float
+    law_no: Optional[int] = None
+    approve_date: Optional[str] = None
+
+class FulltextSearchResult(BaseModel):
+    id: int
+    caption: str
+    search_rank: float
+    law_no: Optional[int] = None
+    approve_date: Optional[str] = None
+
+class CombinedSearchResult(BaseModel):
+    id: int
+    caption: str
+    similarity_score: float
+    fulltext_score: float
+    combined_score: float
+    law_no: Optional[int] = None
+    approve_date: Optional[str] = None
+
+# RENAME THIS to avoid conflict with existing SearchRequest
+class SearchFunctionsRequest(BaseModel):
+    q: str
+    limit: Optional[int] = 10
+    threshold: Optional[float] = 0.3
 
 @router.get("/laws/{law_id}", response_model=LawResponse)
 async def get_law(law_id: int, current_user: User = Depends(get_current_user)):
@@ -241,3 +271,166 @@ async def get_topics(current_user: User = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error getting topics: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/search/trigram", response_model=List[TrigramSearchResult])
+async def search_laws_trigram(
+    search_request: SearchFunctionsRequest,  # Use the renamed model
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Search laws using PostgreSQL trigram similarity
+    Returns: id, caption, similarity score
+    """
+    try:
+        if not search_request.q:
+            raise HTTPException(status_code=400, detail="Search query parameter 'q' is required")
+        
+        # Call the PostgreSQL function using MainSessionLocal
+        results = execute_function_query(
+            "search_lwlaw_trigram_fast",
+            [search_request.q, search_request.threshold, search_request.limit]
+        )
+        
+        # Enrich results with additional law details
+        enriched_results = []
+        for result in results:
+            law_id, caption, similarity = result
+            law_details = get_law_details(law_id)
+            
+            enriched_results.append({
+                "id": law_id,
+                "caption": caption,
+                "similarity": similarity,
+                "law_no": law_details.get('law_no') if law_details else None,
+                "approve_date": law_details.get('approve_date') if law_details else None
+            })
+        
+        return enriched_results
+        
+    except Exception as e:
+        logger.error(f"Error in trigram search: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/search/fulltext", response_model=List[FulltextSearchResult])
+async def search_laws_fulltext(
+    search_request: SearchFunctionsRequest,  # Use the renamed model
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Search laws using PostgreSQL full-text search
+    Returns: id, caption, search_rank
+    """
+    try:
+        if not search_request.q:
+            raise HTTPException(status_code=400, detail="Search query parameter 'q' is required")
+        
+        # Call the PostgreSQL function
+        results = execute_function_query(
+            "search_lwlaw_fulltext_fast",
+            [search_request.q, search_request.limit]
+        )
+        
+        # Enrich results with additional law details
+        enriched_results = []
+        for result in results:
+            law_id, caption, search_rank = result
+            law_details = get_law_details(law_id)
+            
+            enriched_results.append({
+                "id": law_id,
+                "caption": caption,
+                "search_rank": search_rank,
+                "law_no": law_details.get('law_no') if law_details else None,
+                "approve_date": law_details.get('approve_date') if law_details else None
+            })
+        
+        return enriched_results
+        
+    except Exception as e:
+        logger.error(f"Error in fulltext search: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.post("/search/combined", response_model=List[CombinedSearchResult])
+async def search_laws_combined(
+    search_request: SearchFunctionsRequest,  # Use the renamed model
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Search laws using combined trigram and full-text search
+    Returns: id, caption, similarity_score, fulltext_score, combined_score
+    """
+    try:
+        if not search_request.q:
+            raise HTTPException(status_code=400, detail="Search query parameter 'q' is required")
+        
+        # Call the PostgreSQL function
+        results = execute_function_query(
+            "search_lwlaw_combined_fast",
+            [search_request.q, search_request.threshold, search_request.limit]
+        )
+        
+        # Enrich results with additional law details
+        enriched_results = []
+        for result in results:
+            law_id, caption, similarity_score, fulltext_score, combined_score = result
+            law_details = get_law_details(law_id)
+            
+            enriched_results.append({
+                "id": law_id,
+                "caption": caption,
+                "similarity_score": similarity_score,
+                "fulltext_score": fulltext_score,
+                "combined_score": combined_score,
+                "law_no": law_details.get('law_no') if law_details else None,
+                "approve_date": law_details.get('approve_date') if law_details else None
+            })
+        
+        return enriched_results
+        
+    except Exception as e:
+        logger.error(f"Error in combined search: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Helper functions
+def get_law_details(law_id: int):
+    """
+    Get additional law details (law_no, approve_date) from lwlaw table
+    """
+    db = MainSessionLocal()
+    try:
+        sql = text("SELECT lawno, approvedate FROM lwlaw WHERE id = :law_id")
+        result = db.execute(sql, {"law_id": law_id}).fetchone()
+        
+        if result:
+            return {
+                'law_no': result[0],
+                'approve_date': result[1]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error getting law details for ID {law_id}: {str(e)}")
+        return None
+    finally:
+        db.close()
+
+def execute_function_query(function_name: str, params: list):
+    """
+    Execute a PostgreSQL function and return results
+    """
+    db = MainSessionLocal()
+    try:
+        # Build the function call with parameters
+        param_placeholders = ", ".join([":param{}".format(i) for i in range(len(params))])
+        sql = text(f"SELECT * FROM {function_name}({param_placeholders})")
+        
+        # Create parameter dictionary
+        param_dict = {f"param{i}": param for i, param in enumerate(params)}
+        
+        result = db.execute(sql, param_dict).fetchall()
+        return result
+    except Exception as e:
+        logger.error(f"Error executing function {function_name}: {str(e)}")
+        raise
+    finally:
+        db.close()
