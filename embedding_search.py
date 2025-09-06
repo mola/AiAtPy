@@ -7,16 +7,24 @@ from transformers import AutoModel
 from transformers import AutoTokenizer
 import torch
 import os
+from PySide6.QtCore import QSettings
+from aiatconfig import AiAtConfig
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class EmbeddingSearch:
     def __init__(self):
-        self.d = 1024
-        self.k = 10
-        self.index_method = 'IndexFlatL2'
-        self.embedding_model = 'heydariAI/persian-embeddings'
-        self.faiss_index_file = "/home/arisa/diar/checkpoints/faiss_index_heydariAI_IndexFlatL2_checkpoint_1037000.idx"
-        self.pickle_map_file = "/home/arisa/diar/checkpoints/faiss_to_section_map.pkl"
+
+        CONF_DIR = AiAtConfig.get_conf_dir()
+        settings = QSettings(os.path.join(CONF_DIR, "settings.ini"), QSettings.IniFormat)
+
+        # Read values from QSettings with fallback to defaults
+        self.d = int(settings.value("embedding/dimension", 1024))
+        self.k = int(settings.value("embedding/top_k", 10))
+        self.index_method = settings.value("embedding/index_method", "IndexFlatL2")
+        self.embedding_model = settings.value("embedding/model_name", "heydariAI/persian-embeddings")
+        self.faiss_index_file = settings.value("embedding/faiss_index_path", "checkpoints/faiss_index_heydariAI_IndexFlatL2_checkpoint_1037000.idx")
+        self.pickle_map_file = settings.value("embedding/pickle_map_path", "checkpoints/faiss_to_section_map.pkl")
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.device = torch.device("cpu")
