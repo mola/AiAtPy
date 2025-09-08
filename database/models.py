@@ -37,6 +37,20 @@ class AnalysisTask(MainBase):
     result = Column(Text)
     created_at = Column(BigInteger, default=lambda: int(time.time()))  # Current Unix timestamp
 
+class RAGResult(MainBase):
+    __tablename__ = 'rag_results'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey('analysis_tasks.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    question = Column(Text, nullable=False)
+    context = Column(Text, nullable=True)
+    answer = Column(Text, nullable=False)
+    relevant_data_count = Column(Integer, default=0)
+    created_at = Column(BigInteger, default=lambda: int(time.time()))
+    
+    task = relationship("AnalysisTask", backref="rag_results")
+
 class ComparisonResult(MainBase):
     __tablename__ = 'comparison_results'
     

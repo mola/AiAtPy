@@ -3,6 +3,7 @@ from PySide6.QtCore import QObject, Slot, QTimer
 from bridge import Bridge
 from pipeline.paradox_detector import ParadoxDetector
 from pipeline.paradox2_detector import Paradox2Detector
+from pipeline.rag_detector import EnhancedRAGDetector
 from llm_connectors.deepseek_chat import DeepSeekChat
 from fastapi_app import create_fastapi_app, get_ssl_context
 from fastapi_server.websocket_manager import manager
@@ -17,6 +18,7 @@ class AppManager(QObject):
         self.fastapi_app = None
         self.paradox_detector = ParadoxDetector(self,searcher)
         self.paradox2_detector = Paradox2Detector(self)
+        self.rag_detector = EnhancedRAGDetector(self)
         self.bridge.new_analysis_task.connect(self.handle_new_task)
         self.dummy_timer = None
         self.deepseek_chat = DeepSeekChat()
@@ -72,6 +74,11 @@ class AppManager(QObject):
     def add_analysis_rules_task(self, data):
         print(f"New analysis task received task id: {data}")
         self.paradox2_detector.process_task(data)
+
+    @Slot(int)
+    def add_rag_task(self, data):
+        print(f"New RAG task received task id: {data}")
+        self.rag_detector.process_task(data)
 
     def chat(self, message: str) -> Dict[str, Any]:
         """Send a chat message and get the assistant's response with references"""

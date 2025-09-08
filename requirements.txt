@@ -3,3 +3,4 @@ openai
 sqlalchemy
 python-dateutil
 requests
+langchain_community

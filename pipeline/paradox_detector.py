@@ -64,7 +64,7 @@ class ParadoxDetector(QObject):
             # Send initial log to user
             log_data = {
                 "type": "log",
-                "message": f"Starting semantic search for: {query}"
+                "message": f"Starting semantic search "
                 }
             self.send_log_to_user(task.user_id, task_id, log_data)
             
@@ -93,7 +93,7 @@ class ParadoxDetector(QObject):
                 print("ids:", section_ids)
                 
                 # Send search completion log
-                self.send_log_to_user(task.user_id, f"Found {len(section_ids)} relevant sections in {search_end - search_start:.2f} seconds")
+                self.send_log_to_user(task.user_id, task_id, f"Found {len(section_ids)} relevant sections in {search_end - search_start:.2f} seconds")
                 
                 # Fetch the corresponding ORM models (LWSection instances)
                 sections = db_r.query(LWSection).filter(LWSection.ID.in_(section_ids)).all()
@@ -103,7 +103,11 @@ class ParadoxDetector(QObject):
                     raise ValueError(error_msg)
 
                 print(f"Retrieved sections: {len(sections)}")
-                self.send_log_to_user(task.user_id, f"Starting comparison of {len(sections)} sections...")
+                start_log = {
+                "type": "log",
+                "message": f"Starting comparison of {len(sections)} sections"
+                }                
+                self.send_log_to_user(task.user_id,task_id, start_log)
 
             else:
                 # Case for comparing to one specific law
@@ -120,10 +124,14 @@ class ParadoxDetector(QObject):
 
                 if not sections:
                     error_msg = f"No sections found for law {law_id}"
-                    self.send_log_to_user(task.user_id, error_msg)
+                    self.send_log_to_user(task.user_id,task_id, error_msg)
                     raise ValueError(error_msg)
                 
-                self.send_log_to_user(task.user_id, f"Starting comparison of {len(sections)} sections from law {law_id}...")
+                start_log = {
+                "type": "log",
+                "message": f"Starting comparison of {len(sections)} sections from law {law_id}..."
+                }
+                self.send_log_to_user(task.user_id,task_id, start_log)
 
             # Initialize tracking for this task with its own current_section_index
             self.active_tasks[task_id] = {

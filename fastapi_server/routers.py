@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from database.session import MainSessionLocal, RulesSessionLocal
 from database.crud import create_analysis_task
-from database.models import AnalysisTask, ComparisonResult, User
+from database.models import AnalysisTask, ComparisonResult, User, RAGResult
 from database.models_rules import LWSection, LWLaw
 from fastapi_server.auth import get_current_user
 from utilities.persian_embedding import PersianEmbeddingSearch
@@ -40,6 +40,18 @@ class AnalyzeRulesRequest(BaseModel):
     section_no: int
     check_law_id: str
     topic_ids: Optional[List[int]] = None
+
+class RAGQueryRequest(BaseModel):
+    question: str
+    title: Optional[str] = None
+
+class RAGResultResponse(BaseModel):
+    id: int
+    task_id: int
+    question: str
+    answer: str
+    relevant_data_count: int
+    created_at: datetime
 
 class TaskResponse(BaseModel):
     task_id: int
@@ -161,6 +173,182 @@ async def analyze_rules(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
+
+@router.post("/rag/query")
+async def rag_query(
+    fastapi_request: Request,
+    request_body: RAGQueryRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Submit a question for RAG analysis on sports data
+    """
+    db = MainSessionLocal()
+    try:
+        # Store all relevant data in JSON format
+        task_data = {
+            "type": "rag",
+            "prompt": request_body.question,
+            "prompt_title": request_body.title or f"RAG Query: {request_body.question[:50]}...",
+            "rag_query": True
+        }
+        
+        task = create_analysis_task(
+            db=db,
+            user_id=current_user.id,
+            data=task_data
+        )
+        
+        app_manager = fastapi_request.app.state.app_manager
+        app_manager.add_rag_task(task.id)
+        
+        return {
+            "message": "RAG analysis started",
+            "task_id": task.id,
+            "question": request_body.question
+        }
+    except Exception as e:
+        logger.exception("Error creating RAG task")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/rag/results/{task_id}")
+async def get_rag_results(
+    task_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get RAG results for a specific task
+    """
+    db = MainSessionLocal()
+    
+    try:
+        # Get the main task
+        task = db.query(AnalysisTask).filter(
+            AnalysisTask.id == task_id,
+            AnalysisTask.user_id == current_user.id
+        ).first()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        # Get RAG results
+        rag_result = db.query(RAGResult).filter(
+            RAGResult.task_id == task_id
+        ).first()
+        
+        if not rag_result:
+            return {
+                "task_id": task_id,
+                "status": task.status,
+                "message": "Results not yet available"
+            }
+        
+        return {
+            "task_id": task_id,
+            "status": task.status,
+            "results": {
+                "question": rag_result.question,
+                "answer": rag_result.answer,
+                "relevant_data_count": rag_result.relevant_data_count,
+                "created_at": rag_result.created_at
+            }
+        }
+        
+    except Exception as e:
+        logger.exception(f"Error getting RAG results for task {task_id}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/rag/tasks")
+async def get_rag_tasks(current_user: User = Depends(get_current_user)):
+    """
+    Get all RAG tasks for the current user
+    """
+    db = MainSessionLocal()
+    try:
+        # Get all RAG tasks for the current user
+        tasks = db.query(AnalysisTask).filter(
+            AnalysisTask.user_id == current_user.id,
+            AnalysisTask.data["type"].astext == "rag"
+        ).order_by(AnalysisTask.created_at.desc()).all()
+        
+        tasks_data = []
+        for task in tasks:
+            # Parse task data JSON
+            task_json = task.data if task.data else {}
+            
+            # Get RAG result if available
+            rag_result = db.query(RAGResult).filter(
+                RAGResult.task_id == task.id
+            ).first()
+            
+            tasks_data.append({
+                'task_id': task.id,
+                'type': 'rag',
+                'question': task_json.get('prompt', ''),
+                'title': task_json.get('prompt_title', ''),
+                'status': task.status,
+                'created_at': task.created_at,
+                'has_results': rag_result is not None,
+                'answer': rag_result.answer if rag_result else None,
+                'relevant_data_count': rag_result.relevant_data_count if rag_result else 0
+            })
+        
+        return tasks_data
+    except Exception as e:
+        logger.exception("Error getting RAG tasks")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.delete("/rag/task/{task_id}")
+async def delete_rag_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a RAG task and its results
+    """
+    db = MainSessionLocal()
+    
+    try:
+        # First verify the task exists and belongs to the current user
+        task = db.query(AnalysisTask).filter(
+            AnalysisTask.id == task_id,
+            AnalysisTask.user_id == current_user.id,
+            AnalysisTask.data["type"].astext == "rag"
+        ).first()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="RAG task not found")
+        
+        # Delete RAG results for this task
+        delete_rag_stmt = delete(RAGResult).where(
+            RAGResult.task_id == task_id
+        )
+        db.execute(delete_rag_stmt)
+        
+        # Delete the task itself
+        db.delete(task)
+        
+        # Commit the transaction
+        db.commit()
+        
+        return {
+            "message": "RAG task and all related results deleted successfully",
+            "task_id": task_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Error deleting RAG task {task_id}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete RAG task: {str(e)}")
+    finally:
+        db.close()
+
 
 @router.get("/task/{task_id}")
 async def get_task_status(
