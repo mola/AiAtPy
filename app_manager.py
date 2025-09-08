@@ -138,6 +138,29 @@ class AppManager(QObject):
             print(f"Error in sync wrapper: {str(e)}")
             return False
 
+    def send_dict_to_user(self, user_id: int, message_dict: dict) -> bool:
+        """Synchronous wrapper for sending dictionaries directly to user"""
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.send_dict_to_user_async(user_id, message_dict)
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            print(f"Error in send_dict_to_user sync wrapper: {str(e)}")
+            return False
+
+    async def send_dict_to_user_async(self, user_id: int, message_dict: dict) -> bool:
+        """Send a dictionary message directly to a specific user"""
+        try:
+            await self.fastapi_app.state.websocket_manager.send_to_user(user_id, message_dict)
+            return True
+        except Exception as e:
+            print(f"Error sending dict to user {user_id}: {str(e)}")
+            return False
+
     def chat_reset(self):
         """Reset the chat conversation history"""
         try:

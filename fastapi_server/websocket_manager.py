@@ -22,15 +22,28 @@ class WebSocketManager:
         if user_id in self.active_connections:
             del self.active_connections[user_id]
 
-    async def send_to_user(self, user_id: int, message: dict):
-        """Send a custom message/log to a specific user."""
+    async def send_to_user(self, user_id: int, message):
+        """Send a message to a specific user - accepts both string and dict"""
         if user_id in self.active_connections:
             websocket = self.active_connections[user_id]
             try:
-                await websocket.send_json(message)
+                if isinstance(message, str):
+                    # If it's a string, try to parse as JSON
+                    try:
+                        message_dict = json.loads(message)
+                        await websocket.send_json(message_dict)
+                    except json.JSONDecodeError:
+                        # If not valid JSON, send as simple message
+                        await websocket.send_json({"message": message})
+                elif isinstance(message, dict):
+                    # If it's already a dict, send directly
+                    await websocket.send_json(message)
+                else:
+                    # Handle other types by converting to string
+                    await websocket.send_json({"message": str(message)})
             except Exception as e:
                 logger.error(f"Error sending to user {user_id}: {str(e)}")
-                self.disconnect(user_id)  # Clean up if send fails
+                self.disconnect(user_id)
         else:
             logger.warning(f"User {user_id} not connected")
 
