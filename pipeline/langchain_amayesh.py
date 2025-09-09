@@ -2,10 +2,12 @@ import os
 from typing import List, Dict, Any
 import psycopg2
 from langchain_community.llms import Ollama
+from langchain_openai import OpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import BaseOutputParser
 import json
+from aiatconfig import AiAtConfig
 
 class SQLOutputParser(BaseOutputParser):
     """Parse SQL query from LLM output"""
@@ -61,23 +63,42 @@ class SQLQueryGenerator:
     """Generates SQL queries using LLM"""
 
     def __init__(self):
-        self.llm = Ollama(model="llama3.1")
+        self.llm = Ollama(model="deepseek-r1")
+
+class SQLQueryGenerator:
+    """Generates SQL queries using LLM"""
+
+    def __init__(self):
+        # self.llm = Ollama(model="deepseek-r1")
+        self.llm = OpenAI(api_key="sk-889233a83f2a4e02804fa3a89e2744f6", base_url="https://api.deepseek.com/v1", model="deepseek-chat",streaming=False )
         self.prompt_template = PromptTemplate(
             input_variables=["question", "table_schema"],
             template="""
-            شما یک دستیار هوشمند برای تولید کوئری SQL هستید. بر اساس سوال کاربر و ساختار جدول، کوئری SQL مناسب تولید کنید.
+			شما یک متخصص SQL هستید. بر اساس سوال کاربر و ساختار جدول، کوئری SQL مناسب تولید کنید.
 
-            ساختار جدول amayesh:
-            {table_schema}
+			ساختار جدول:
+			{table_schema}
 
-            سوال کاربر: {question}
+			سوال کاربر: {question}
 
-            لطفاً فقط کوئری SQL خالص تولید کنید بدون هیچ توضیح اضافی. از کامنت استفاده نکنید.
-            از فارسی در کوئری استفاده نکنید. فقط از نام‌های ستون‌های انگلیسی استفاده کنید.
+			دستورالعمل‌های مهم:
+			1. همیشه از LIKE برای جستجوی نام مکان‌ها استفاده کنید تا تطابق جزئی داشته باشد
+			2. برای شهرها از فیلد county استفاده کنید (مثلاً: county LIKE '%کرج%')
+			3. برای استان‌ها از فیلد province استفاده کنید (مثلاً: province LIKE '%البرز%')
+			4. اگر نام مکان مشخص نیست، از هر دو فیلد جستجو کنید
+			5. از پرانتز برای گروه‌بندی شرایط OR استفاده کنید
 
-            کوئری SQL:
-            """
+			مثال برای سوال "تعداد مهد کودک‌های کرج":
+			SELECT number_of_kindergartens FROM amayesh 
+			WHERE (county LIKE '%کرج%' OR province LIKE '%کرج%')
+
+			لطفاً فقط کوئری SQL تولید کنید و هیچ توضیح اضافی ندهید.
+			از dialect PostgreSQL استفاده کنید.
+			""",
         )
+        self.chain = LLMChain(llm=self.llm, prompt=self.prompt_template)
+        self.output_parser = SQLOutputParser()
+
         self.chain = LLMChain(llm=self.llm, prompt=self.prompt_template)
         self.output_parser = SQLOutputParser()
 
@@ -93,7 +114,9 @@ class ResponseGenerator:
     """Generates final response from SQL results using LLM"""
 
     def __init__(self):
-        self.llm = Ollama(model="llama3.1")
+        # self.llm = Ollama(model="deepseek-r1")
+        self.llm = OpenAI(api_key="sk-889233a83f2a4e02804fa3a89e2744f6", base_url="https://api.deepseek.com/v1", model="deepseek-chat",streaming=False )
+
         self.prompt_template = PromptTemplate(
             input_variables=["question", "sql_results", "sql_query"],
             template="""
@@ -251,7 +274,8 @@ class SQLQueryGenerator:
     """Generates SQL queries from natural language using LLM"""
     
     def __init__(self):
-        self.llm = Ollama(model="llama3.1")
+        # self.llm = Ollama(model="deepseek-r1")
+        self.llm = OpenAI(api_key="sk-889233a83f2a4e02804fa3a89e2744f6", base_url="https://api.deepseek.com/v1", model="deepseek-chat",streaming=False )
         self.prompt_template = PromptTemplate(
             input_variables=["question", "table_schema"],
             template="""
@@ -276,48 +300,3 @@ class SQLQueryGenerator:
             "table_schema": table_schema
         })
         return self.output_parser.parse(response["text"])
-
-
-# def main():
-#     # Initialize components
-#     db_connector = DatabaseConnector()
-#     sql_generator = SQLQueryGenerator()
-#     response_generator = ResponseGenerator()
-
-#     # User question
-#     question = "تعداد مهد کودک‌های شهر کرج چنتاست ؟ "
-#     # question = "آمار مربیان ورزشی استان تهران و شهرستان تهران به تفکیک سطح تخصص و گرید"
-
-#     print(f"سوال: {question}")
-#     print("در حال تولید کوئری SQL...")
-
-#     # Generate SQL query
-#     table_schema = get_table_schema()
-#     sql_query = sql_generator.generate_sql(question, table_schema)
-
-#     print(f"کوئری تولید شده:\n{sql_query}")
-#     print("در حال اجرای کوئری...")
-
-#     # Execute SQL query
-#     results = db_connector.execute_query(sql_query)
-
-#     print(f"تعداد نتایج: {len(results)}")
-
-#     if results:
-#         print("نتایج کوئری:")
-#         for i, row in enumerate(results[:5], 1):  # Show first 5 results
-#             print(f"{i}. {row}")
-
-#         # Generate final response
-#         print("در حال تولید پاسخ نهایی...")
-#         final_response = response_generator.generate_response(question, results, sql_query)
-
-#         print("\n" + "="*50)
-#         print("پاسخ نهایی:")
-#         print("="*50)
-#         print(final_response)
-#     else:
-#         print("هیچ نتیجه‌ای یافت نشد.")
-
-# if __name__ == "__main__":
-#     main()

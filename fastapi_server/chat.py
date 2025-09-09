@@ -71,10 +71,11 @@ async def send_chat_message(
             if not session:
                 raise HTTPException(status_code=404, detail="Session not found")
         else:
-            session = db.query(ChatSession).filter(
-                ChatSession.user_id == current_user.id,
-                ChatSession.is_active == True
-            ).first()
+            session = 0
+            # session = db.query(ChatSession).filter(
+            #     ChatSession.user_id == current_user.id,
+            #     ChatSession.is_active == True
+            # ).first()
             
             if not session:
                 session = ChatSession(

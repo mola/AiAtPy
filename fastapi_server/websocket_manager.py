@@ -24,6 +24,7 @@ class WebSocketManager:
 
     async def send_to_user(self, user_id: int, message):
         """Send a message to a specific user - accepts both string and dict"""
+
         if user_id in self.active_connections:
             websocket = self.active_connections[user_id]
             try:
@@ -43,7 +44,7 @@ class WebSocketManager:
                     await websocket.send_json({"message": str(message)})
             except Exception as e:
                 logger.error(f"Error sending to user {user_id}: {str(e)}")
-                self.disconnect(user_id)
+                # self.disconnect(user_id)
         else:
             logger.warning(f"User {user_id} not connected")
 

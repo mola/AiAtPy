@@ -44,6 +44,8 @@ class AnalyzeRulesRequest(BaseModel):
 class RAGQueryRequest(BaseModel):
     question: str
     title: Optional[str] = None
+    session_id: int
+
 
 class RAGResultResponse(BaseModel):
     id: int

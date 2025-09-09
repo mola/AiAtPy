@@ -24,6 +24,9 @@ class AppManager(QObject):
         self.deepseek_chat = DeepSeekChat()
         self.searcher = searcher
 
+        self.rag_detector.log_signal.connect(self.handle_log)
+
+
     def initialize(self):
         self.setup_dummy_timer()
         self.setup_fastapi()
@@ -79,6 +82,10 @@ class AppManager(QObject):
     def add_rag_task(self, data):
         print(f"New RAG task received task id: {data}")
         self.rag_detector.process_task(data)
+
+    @Slot(int, dict)
+    def handle_log(self, user_id, log_data):
+        self.send_dict_to_user(user_id, log_data)
 
     def chat(self, message: str) -> Dict[str, Any]:
         """Send a chat message and get the assistant's response with references"""
